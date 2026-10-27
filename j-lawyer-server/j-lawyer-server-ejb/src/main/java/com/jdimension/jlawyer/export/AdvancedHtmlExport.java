@@ -672,6 +672,7 @@ import java.io.InputStream;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.Comparator;
 import com.jdimension.jlawyer.services.ArchiveFileServiceLocal;
 import com.jdimension.jlawyer.services.CalendarServiceLocal;
 import java.awt.Color;
@@ -684,6 +685,7 @@ import java.nio.charset.StandardCharsets;
 import java.nio.file.attribute.FileTime;
 import java.util.Date;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Locale;
@@ -704,6 +706,7 @@ public class AdvancedHtmlExport {
 
     private static final String CELL_BREAK = "\t";
     private static final String LINE_BREAK = System.getProperty("line.separator");
+    private static final Pattern WINDOWS_RESERVED_NAME = Pattern.compile("^(CON|PRN|AUX|NUL|COM[0-9¹²³]|LPT[0-9¹²³])(\\..*)?$", Pattern.CASE_INSENSITIVE);
 
     private final SimpleDateFormat dfDate = new SimpleDateFormat("dd.MM.yyyy", Locale.GERMANY);
     private final SimpleDateFormat dfDateTime = new SimpleDateFormat("dd.MM.yyyy 'um' HH:mm 'Uhr'", Locale.GERMANY);
@@ -752,6 +755,7 @@ public class AdvancedHtmlExport {
                 rubrum = rubrum.trim();
                 // spaces not valid in URLs, and client tries to open the unzipped export in browser
                 rubrum = rubrum.replace(" ", "");
+                rubrum = toPortableName(rubrum);
             }
         }
 
@@ -830,7 +834,9 @@ public class AdvancedHtmlExport {
             }
 
             // Prepare folder mapping and write assets
-            HashMap<String, String> folderPathById = buildFolderPathIndex(dto.getRootFolder());
+            // paths below Dokumente/ in use, lower case because Windows and macOS do not distinguish case
+            HashSet<String> usedPaths = new HashSet<>();
+            HashMap<String, String> folderPathById = buildFolderPathIndex(dto.getRootFolder(), usedPaths);
             HashMap<String, String> folderPathByIdForExport = folderPathById;
 
             writeAsset(cssDir, "style-base.css", "templates/caseexport/css/style-base.css", null);
@@ -848,7 +854,10 @@ public class AdvancedHtmlExport {
             HashMap<String, String> relPathByDocId = new HashMap<>();
             int iDoc = 0;
             if (documents != null) {
-                for (ArchiveFileDocumentsBean d : documents) {
+                // fixed order, so suffixes for colliding names are the same in every export
+                List<ArchiveFileDocumentsBean> sortedDocuments = new ArrayList<>(documents);
+                sortedDocuments.sort(Comparator.comparing((ArchiveFileDocumentsBean d) -> ServerStringUtils.nonEmpty(d.getName())).thenComparing(d -> ServerStringUtils.nonEmpty(d.getId())));
+                for (ArchiveFileDocumentsBean d : sortedDocuments) {
                     if (d.isDeleted()) {
                         continue;
                     }
@@ -857,7 +866,7 @@ public class AdvancedHtmlExport {
                         byte[] content = caseFacade.getDocumentContentUnrestricted(d.getId());
                         String folderId = (d.getFolder() != null ? d.getFolder().getId() : null);
                         String folderPath = folderPathById.getOrDefault(folderId, "");
-                        String safeName = ServerFileUtils.sanitizeFileName(ServerStringUtils.nonEmpty(d.getName()));
+                        String safeName = toPortableName(ServerFileUtils.sanitizeFileName(ServerStringUtils.nonEmpty(d.getName())));
                         if (safeName.trim().isEmpty()) {
                             safeName = System.currentTimeMillis() + "_document";
                         }
@@ -865,7 +874,7 @@ public class AdvancedHtmlExport {
                         if (!targetDir.exists()) {
                             targetDir.mkdirs();
                         }
-                        File outFile = uniqueFile(targetDir, safeName);
+                        File outFile = uniqueFile(targetDir, folderPath, safeName, usedPaths);
                         try (FileOutputStream fos = new FileOutputStream(outFile)) {
                             fos.write(content);
                         }
@@ -1194,7 +1203,8 @@ public class AdvancedHtmlExport {
         return ("Dokumente/" + rp).replace("\\", "/");
     }
 
-    private File uniqueFile(File dir, String baseName) {
+    // folder paths are reserved before any document is written, so a document never takes the name of a folder
+    private File uniqueFile(File dir, String folderPath, String baseName, HashSet<String> usedPaths) {
         String name = baseName;
         String ext = "";
         int dot = baseName.lastIndexOf('.');
@@ -1202,26 +1212,44 @@ public class AdvancedHtmlExport {
             name = baseName.substring(0, dot);
             ext = baseName.substring(dot);
         }
-        File f = new File(dir, baseName);
+        String fileName = baseName;
         int i = 1;
-        while (f.exists()) {
-            f = new File(dir, name + " (" + i + ")" + ext);
+        // the existence check also catches names the server file system treats as equal, e.g. Unicode normalization variants
+        while (usedPaths.contains(usedPathKey(folderPath, fileName)) || new File(dir, fileName).exists()) {
+            fileName = name + " (" + i + ")" + ext;
             i++;
         }
-        return f;
+        usedPaths.add(usedPathKey(folderPath, fileName));
+        return new File(dir, fileName);
     }
 
-    private HashMap<String, String> buildFolderPathIndex(CaseFolder root) {
+    private static String usedPathKey(String folderPath, String name) {
+        String path = folderPath.isEmpty() ? name : (folderPath + File.separator + name);
+        return path.toLowerCase(Locale.ROOT);
+    }
+
+    // the export is unzipped by the client, which may run on Windows: replace characters Windows rejects,
+    // drop trailing dots and spaces and avoid reserved device names - names valid on Windows are not changed
+    private static String toPortableName(String name) {
+        String portable = ServerStringUtils.nonEmpty(name).replaceAll("[\\p{Cntrl}\\\\/:*?\"<>|]", "_");
+        portable = portable.replaceAll("[. ]+$", "");
+        if (WINDOWS_RESERVED_NAME.matcher(portable).matches()) {
+            portable = "_" + portable;
+        }
+        return portable;
+    }
+
+    private HashMap<String, String> buildFolderPathIndex(CaseFolder root, HashSet<String> usedPaths) {
         HashMap<String, String> map = new HashMap<>();
         if (root == null) {
             return map;
         }
         map.put(root.getId(), "");
-        buildFolderPathIndexRec(root, "", map);
+        buildFolderPathIndexRec(root, "", map, usedPaths);
         return map;
     }
 
-    private void buildFolderPathIndexRec(CaseFolder f, String prefix, HashMap<String, String> map) {
+    private void buildFolderPathIndexRec(CaseFolder f, String prefix, HashMap<String, String> map, HashSet<String> usedPaths) {
         if (f == null) {
             return;
         }
@@ -1229,14 +1257,24 @@ public class AdvancedHtmlExport {
         if (children == null) {
             return;
         }
-        for (CaseFolder c : children) {
-            String name = ServerFileUtils.sanitizeFolderName(ServerStringUtils.nonEmpty(c.getName()));
+        // sorted copy, see export()
+        List<CaseFolder> sortedChildren = new ArrayList<>(children);
+        sortedChildren.sort(Comparator.comparing((CaseFolder c) -> ServerStringUtils.nonEmpty(c.getName())).thenComparing(c -> ServerStringUtils.nonEmpty(c.getId())));
+        for (CaseFolder c : sortedChildren) {
+            String name = toPortableName(ServerFileUtils.sanitizeFolderName(ServerStringUtils.nonEmpty(c.getName())));
             if (name.isEmpty()) {
                 name = "---";
             }
-            String path = prefix.isEmpty() ? name : (prefix + File.separator + name);
+            // sibling folders whose names only differ in case (or became equal by sanitizing) get separate directories
+            String folderName = name;
+            int i = 1;
+            while (!usedPaths.add(usedPathKey(prefix, folderName))) {
+                folderName = name + " (" + i + ")";
+                i++;
+            }
+            String path = prefix.isEmpty() ? folderName : (prefix + File.separator + folderName);
             map.put(c.getId(), path);
-            buildFolderPathIndexRec(c, path, map);
+            buildFolderPathIndexRec(c, path, map, usedPaths);
         }
     }
 
