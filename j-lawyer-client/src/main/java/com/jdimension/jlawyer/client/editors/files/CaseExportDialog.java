@@ -21,13 +21,10 @@ import com.jdimension.jlawyer.services.JLawyerServiceLocator;
 import java.awt.Component;
 import java.awt.FlowLayout;
 import java.io.File;
-import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
-import java.util.zip.ZipEntry;
-import java.util.zip.ZipInputStream;
 import javax.swing.JCheckBox;
 import javax.swing.JFileChooser;
 import javax.swing.JLabel;
@@ -321,7 +318,8 @@ public class CaseExportDialog extends javax.swing.JDialog {
                 this.progress("Export wird erstellt...", 2);
                 DataBucket bucket = fileService.loadHtmlCaseExport(caseIds);
                 int max = bucket.getTotalNumberOfBuckets() + 2;
-                try (FileOutputStream output = new FileOutputStream(baseDir.getPath() + File.separator + bucket.getFileName(), true)) {
+                // do not append to a file left behind by a previous, failed export
+                try (FileOutputStream output = new FileOutputStream(baseDir.getPath() + File.separator + bucket.getFileName(), false)) {
                     output.write(bucket.getPayload());
                 }
                 DataBucketLoaderRemote bucketLoader = locator.lookupDataBucketLoaderRemote();
@@ -339,61 +337,29 @@ public class CaseExportDialog extends javax.swing.JDialog {
                 }
 
                 //get the zip file content
-                FileInputStream bucketInStream = new FileInputStream(baseDir.getPath() + File.separator + bucket.getFileName());
-                ZipInputStream zis
-                        = new ZipInputStream(bucketInStream);
-                //get the zipped file list entry
-                ZipEntry ze = zis.getNextEntry();
+                String bucketFile = baseDir.getPath() + File.separator + bucket.getFileName();
+                List<String> extracted = ExportAsHtmlAction.extractExport(this, new File(bucketFile), baseDir);
 
                 String browserUrl = "file://" + baseDir.getPath() + "/";
                 String indexHtml = null;
 
-                while (ze != null) {
-
-                    String fileName = ze.getName();
-                    this.progress("Entpacke Datei " + fileName);
+                for (String fileName : extracted) {
                     if (fileName.endsWith("index.html")) {
                         if(indexHtml==null)
                             indexHtml=fileName;
                         if(indexHtml.length()>fileName.length())
                             indexHtml=fileName;
                     }
-                    File newFile = new File(baseDir.getPath() + File.separator + fileName);
-                    byte[] buffer = new byte[1024];
-                    //create all non exists folders
-                    //else you will hit FileNotFoundException for compressed folder
-                    new File(newFile.getParent()).mkdirs();
-
-                    try (FileOutputStream fos = new FileOutputStream(newFile)) {
-
-                        int len;
-                        while ((len = zis.read(buffer)) > 0) {
-                            fos.write(buffer, 0, len);
-                        }
-                    }
-
-                    try {
-                        if (ze.getLastModifiedTime() != null) {
-                            newFile.setLastModified(ze.getLastModifiedTime().toMillis());
-                        } else {
-                            log.warn("ZIP entry does not have a last modified timestamp for " + newFile.getName());
-                        }
-                    } catch (Throwable t) {
-                        log.error("Unable to set last modified time", t);
-                    }
-
-                    ze = zis.getNextEntry();
                 }
 
-                zis.closeEntry();
-                zis.close();
-                bucketInStream.close();
-                String bucketFile = baseDir.getPath() + File.separator + bucket.getFileName();
                 if (!(new File(bucketFile).delete())) {
                     log.error("Could not delete data bucket file " + bucketFile);
                 }
 
-                DesktopUtils.openBrowserFromDialog(browserUrl + indexHtml, this.indicator);
+                if (indexHtml != null) {
+                    browserUrl = browserUrl + indexHtml;
+                }
+                DesktopUtils.openBrowserFromDialog(browserUrl, this.indicator);
 
             } catch (Throwable t) {
                 log.error("Could not unzip exported case", t);

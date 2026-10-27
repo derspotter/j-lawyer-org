@@ -674,10 +674,19 @@ import com.jdimension.jlawyer.services.ArchiveFileServiceRemote;
 import com.jdimension.jlawyer.services.DataBucketLoaderRemote;
 import com.jdimension.jlawyer.services.JLawyerServiceLocator;
 import java.awt.Component;
+import java.io.EOFException;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.InvalidPathException;
+import java.nio.file.Path;
+import java.nio.file.Paths;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.zip.ZipEntry;
+import java.util.zip.ZipException;
 import java.util.zip.ZipInputStream;
 import org.apache.log4j.Logger;
 
@@ -723,7 +732,8 @@ public class ExportAsHtmlAction extends ProgressableAction {
             this.progress("Export wird erstellt...",2);
             DataBucket bucket = fileService.loadHtmlCaseExport(this.caseId);
             this.max=bucket.getTotalNumberOfBuckets()+2;
-            try ( FileOutputStream output = new FileOutputStream(dir.getPath() + File.separator + bucket.getFileName(), true)) {
+            // do not append to a file left behind by a previous, failed export
+            try ( FileOutputStream output = new FileOutputStream(dir.getPath() + File.separator + bucket.getFileName(), false)) {
                 output.write(bucket.getPayload());
             }
             DataBucketLoaderRemote bucketLoader = locator.lookupDataBucketLoaderRemote();
@@ -740,52 +750,16 @@ public class ExportAsHtmlAction extends ProgressableAction {
             }
 
             //get the zip file content
-            FileInputStream bucketInStream=new FileInputStream(dir.getPath() + File.separator + bucket.getFileName());
-            ZipInputStream zis
-                    = new ZipInputStream(bucketInStream);
-            //get the zipped file list entry
-            ZipEntry ze = zis.getNextEntry();
+            String bucketFile=dir.getPath() + File.separator + bucket.getFileName();
+            List<String> extracted = extractExport(this, new File(bucketFile), dir);
 
             String browserUrl = "file://" + dir.getPath() + "/";
-
-            while (ze != null) {
-
-                String fileName = ze.getName();
-                this.progress("Entpacke Datei " + fileName);
+            for (String fileName : extracted) {
                 if (fileName.endsWith("index.html")) {
                     browserUrl = browserUrl + fileName;
                 }
-                File newFile = new File(dir.getPath() + File.separator + fileName);
-                byte[] buffer = new byte[1024];
-                //create all non exists folders
-                //else you will hit FileNotFoundException for compressed folder
-                new File(newFile.getParent()).mkdirs();
-
-                try ( FileOutputStream fos = new FileOutputStream(newFile)) {
-
-                    int len;
-                    while ((len = zis.read(buffer)) > 0) {
-                        fos.write(buffer, 0, len);
-                    }
-                }
-
-                try {
-                    if (ze.getLastModifiedTime() != null) {
-                        newFile.setLastModified(ze.getLastModifiedTime().toMillis());
-                    } else {
-                        log.warn("ZIP entry does not have a last modified timestamp for " + newFile.getName());
-                    }
-                } catch (Throwable t) {
-                    log.error("Unable to set last modified time", t);
-                }
-
-                ze = zis.getNextEntry();
             }
 
-            zis.closeEntry();
-            zis.close();
-            bucketInStream.close();
-            String bucketFile=dir.getPath() + File.separator + bucket.getFileName();
             if(!(new File(bucketFile).delete())) {
                 log.error("Could not delete data bucket file " + bucketFile);
             }
@@ -803,5 +777,129 @@ public class ExportAsHtmlAction extends ProgressableAction {
 
         return true;
 
+    }
+
+    /**
+     * Extracts a downloaded case export (ZIP file) into the target directory. Entries that can not be written, e.g.
+     * because their name is not valid on the local file system, or that would end up outside of the target directory
+     * (also via symbolic links) are skipped and reported in one message at the end, files that could only be written
+     * partially and not be removed are marked as incomplete. A damaged archive still aborts the extraction.
+     *
+     * @param action the action to report progress to
+     * @param zipFile the downloaded export
+     * @param targetDir directory to extract to
+     * @return names of the entries that have been extracted
+     * @throws IOException if the archive can not be read
+     */
+    static List<String> extractExport(ProgressableAction action, File zipFile, File targetDir) throws IOException {
+        List<String> extracted = new ArrayList<>();
+        List<String> failed = new ArrayList<>();
+        Path root = targetDir.toPath().toAbsolutePath().normalize();
+        Path realRoot = root.toRealPath();
+        try (ZipInputStream zis = new ZipInputStream(new FileInputStream(zipFile))) {
+            ZipEntry ze = zis.getNextEntry();
+            while (ze != null) {
+                String fileName = ze.getName();
+                action.progress("Entpacke Datei " + fileName);
+                File newFile = null;
+                try {
+                    // no absolute or drive qualified names, nothing outside of the target directory
+                    Path entryPath = Paths.get(fileName);
+                    Path target = root.resolve(entryPath).normalize();
+                    if (entryPath.getRoot() == null && target.startsWith(root) && !target.equals(root)) {
+                        newFile = target.toFile();
+                    } else {
+                        log.error("ZIP entry points outside of the target directory: " + fileName);
+                    }
+                } catch (InvalidPathException ipe) {
+                    log.error("ZIP entry has an invalid file name: " + fileName, ipe);
+                }
+
+                if (newFile == null) {
+                    failed.add(fileName);
+                } else if (ze.isDirectory()) {
+                    if (!newFile.isDirectory() && !newFile.mkdirs()) {
+                        log.error("Could not create directory " + newFile.getAbsolutePath());
+                        failed.add(fileName);
+                    }
+                } else if (writeEntry(zis, ze, newFile, realRoot, failed)) {
+                    extracted.add(fileName);
+                }
+                // skips whatever is left of a skipped entry
+                ze = zis.getNextEntry();
+            }
+        }
+
+        if (!failed.isEmpty()) {
+            StringBuilder msg = new StringBuilder("Der Export wurde erstellt, folgende Dateien konnten jedoch nicht gespeichert werden:");
+            for (int i = 0; i < failed.size() && i < 20; i++) {
+                msg.append(System.lineSeparator()).append(failed.get(i));
+            }
+            if (failed.size() > 20) {
+                msg.append(System.lineSeparator()).append("... und ").append(failed.size() - 20).append(" weitere");
+            }
+            ThreadUtils.showErrorDialog(EditorsRegistry.getInstance().getMainWindow(), msg.toString(), DesktopUtils.POPUP_TITLE_WARNING);
+        }
+        return extracted;
+    }
+
+    private static boolean writeEntry(ZipInputStream zis, ZipEntry ze, File newFile, Path realRoot, List<String> failed) throws IOException {
+        //create all non exists folders
+        //else you will hit FileNotFoundException for compressed folder
+        File parent = newFile.getParentFile();
+        if (!parent.isDirectory() && !parent.mkdirs()) {
+            log.error("Could not create directory " + parent.getAbsolutePath());
+            failed.add(ze.getName());
+            return false;
+        }
+        FileOutputStream fos;
+        try {
+            // do not follow symbolic links (or junctions) that lead outside of the target directory
+            if (!parent.toPath().toRealPath().startsWith(realRoot) || Files.isSymbolicLink(newFile.toPath())) {
+                log.error("Refusing to write " + newFile.getAbsolutePath() + " - path contains a symbolic link");
+                failed.add(ze.getName());
+                return false;
+            }
+            fos = new FileOutputStream(newFile);
+        } catch (IOException ioe) {
+            log.error("Could not create " + newFile.getAbsolutePath(), ioe);
+            failed.add(ze.getName());
+            return false;
+        }
+
+        byte[] buffer = new byte[1024];
+        try (fos) {
+            int len;
+            while ((len = zis.read(buffer)) > 0) {
+                fos.write(buffer, 0, len);
+            }
+        } catch (ZipException | EOFException corrupt) {
+            // damaged archive - there is no way to continue with the next entry
+            deletePartialFile(newFile);
+            throw corrupt;
+        } catch (IOException ioe) {
+            log.error("Could not write " + newFile.getAbsolutePath(), ioe);
+            failed.add(ze.getName() + (deletePartialFile(newFile) ? "" : " (unvollständig)"));
+            return false;
+        }
+
+        try {
+            if (ze.getLastModifiedTime() != null) {
+                newFile.setLastModified(ze.getLastModifiedTime().toMillis());
+            } else {
+                log.warn("ZIP entry does not have a last modified timestamp for " + newFile.getName());
+            }
+        } catch (Throwable t) {
+            log.error("Unable to set last modified time", t);
+        }
+        return true;
+    }
+
+    private static boolean deletePartialFile(File file) {
+        if (file.delete()) {
+            return true;
+        }
+        log.error("Could not delete incomplete file " + file.getAbsolutePath());
+        return false;
     }
 }
