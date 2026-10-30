@@ -20,6 +20,28 @@
   "confidence": "high"
  },
  {
+  "number": 3701,
+  "title": "Switch JDBC connections to caching_sha2_password (MySQL 8.4/9)",
+  "kind": "enhancement",
+  "area": "server",
+  "category": "D",
+  "fixed_commit": "",
+  "files": [
+   "j-lawyer-backupmgr/src/main/java/org/jlawyer/backupmgr/impl/RestoreExecutor.java",
+   "j-lawyer-server-entities/setup/jboss-ds.xml",
+   "docker/wildfly/standalone.xml",
+   "pom.xml"
+  ],
+  "effort": "M",
+  "risk": "med",
+  "cause": "Backup manager JDBC URL uses sslMode=DISABLED without allowPublicKeyRetrieval, which fails for caching_sha2_password users on first login. Server datasources live in installer/Docker standalone.xml (Docker uses the MariaDB driver). Connector is 8.2.0",
+  "maintainer": "Own task list (2026-10-28): decide and document TLS vs public key retrieval, update datasources, installer scripts, migration notes, test MySQL 8.0/8.4/MariaDB",
+  "notes": "Maintainer epic opened two days ago, decision pending and most work is in installers outside this repo. The backupmgr URL part could become a small PR once he picks the approach",
+  "user_visible": false,
+  "priority": 0,
+  "confidence": "high"
+ },
+ {
   "number": 3671,
   "title": "Aktenanlage: Vorbelegung Sachbearbeiter / Anwalt konfigurierbar",
   "kind": "enhancement",
@@ -63,6 +85,26 @@
   "confidence": "high"
  },
  {
+  "number": 3499,
+  "title": "Windows 11: invisible dialogs pile up behind the main window",
+  "kind": "bug",
+  "area": "client-ui",
+  "category": "R",
+  "fixed_commit": "",
+  "files": [
+   "j-lawyer-client/src/main/java/com/jdimension/jlawyer/client/editors/files/ArchiveFilePanel.java",
+   "j-lawyer-client/src/main/java/com/jdimension/jlawyer/client/utils/FileUtils.java"
+  ],
+  "effort": "M",
+  "risk": "med",
+  "cause": "Not located. Maintainer suspects the per-document name prompts of copyOrMoveDocumentsToOtherCase (FileUtils.getNewFileName, see #3345), reporter denies copying. ReminderNotificationDialog is a reused singleton, so it is not the culprit",
+  "maintainer": "Cannot reproduce despite daily 10h use, asks for the sequence of actions that creates the windows",
+  "notes": "No repro steps, Windows 11 specific window ordering. Reporter later says they are dialogs that accumulate during the day. Possible relation to #3345",
+  "user_visible": true,
+  "priority": 0,
+  "confidence": "med"
+ },
+ {
   "number": 3480,
   "title": "Dropscan: mehrere Scans als 1 PDF herunterladen",
   "kind": "enhancement",
@@ -103,6 +145,26 @@
   "user_visible": true,
   "priority": 3,
   "confidence": "med"
+ },
+ {
+  "number": 3321,
+  "title": "Ingo chat: final answer shown above the tool call notices",
+  "kind": "bug",
+  "area": "client-ui",
+  "category": "F",
+  "fixed_commit": "",
+  "files": [
+   "j-lawyer-client/src/main/java/com/jdimension/jlawyer/client/assistant/AssistantChatPanel.java",
+   "j-lawyer-client/src/main/java/com/jdimension/jlawyer/client/assistant/ToolCallGroupPanel.java"
+  ],
+  "effort": "S",
+  "risk": "low",
+  "cause": "AssistantChatPanel.startBackgroundTask adds the placeholder incomingMsgPanel right after the user message, then appends the ToolCallGroupPanel with pnlMessages.add(activeToolGroup) below it and finally writes the answer into incomingMsgPanel, so the answer sits above the tools. Fix by inserting the group at the z-order index of incomingMsgPanel (or moving the panel below the group)",
+  "maintainer": "",
+  "notes": "Still present after 9fe6fb8e0 (2026-10-30, grouped and collapsible tool calls), which kept the append order. Reopened stored chats (AiChatTranscript.toEntries) already show tools before the answer, so only the live view is inconsistent. Maintainer is actively working in this file, coordinate to avoid conflicts",
+  "user_visible": true,
+  "priority": 3,
+  "confidence": "high"
  },
  {
   "number": 3319,
@@ -396,6 +458,26 @@
   "confidence": "high"
  },
  {
+  "number": 2880,
+  "title": "macOS: clicks in the document list often not recognised",
+  "kind": "bug",
+  "area": "client-ui",
+  "category": "L",
+  "fixed_commit": "",
+  "files": [
+   "j-lawyer-client/src/main/java/com/jdimension/jlawyer/ui/folders/DocumentEntryPanel.java",
+   "j-lawyer-client/src/main/java/com/jdimension/jlawyer/ui/folders/DocumentEntryPanel.form"
+  ],
+  "effort": "M",
+  "risk": "med",
+  "cause": "Likely cause: list-view selection runs in mouseClicked handlers (lblFileNameMouseClicked and siblings) on labels that also carry drag gesture recognizers. On macOS any pointer movement between press and release (Magic Mouse, sensitive mice) suppresses mouseClicked, so the click is lost. Handling selection on mousePressed or mouseReleased with a small tolerance would avoid it",
+  "maintainer": "",
+  "notes": "Only verifiable on macOS hardware (Linux works per commenter). The table view (CaseDocumentsTable, JTable selection on press) is a workaround. b8d672171 (2026-10-27) touched the same handler for the context menu",
+  "user_visible": true,
+  "priority": 0,
+  "confidence": "med"
+ },
+ {
   "number": 2853,
   "title": "Akte loeschen nur nach Passworteingabe / geschuetzte Akten",
   "kind": "enhancement",
@@ -414,5 +496,284 @@
   "user_visible": true,
   "priority": 0,
   "confidence": "high"
+ },
+ {
+  "number": 2592,
+  "title": "Backup restore fails on MariaDB with utf8mb4_0900_ai_ci collation",
+  "kind": "bug",
+  "area": "other",
+  "category": "F",
+  "fixed_commit": "",
+  "files": [
+   "j-lawyer-backupmgr/src/main/java/org/jlawyer/backupmgr/impl/RestoreExecutor.java",
+   "j-lawyer-backupmgr/src/test/java/org/jlawyer/test/backupmgr/RestoreExecutorTest.java"
+  ],
+  "effort": "S",
+  "risk": "med",
+  "cause": "RestoreExecutor.restoreDatabase sources jlawyerdb-dump.sql unchanged via the mysql CLI. Dumps from MySQL 8 carry utf8mb4_0900_ai_ci for tables created with only DEFAULT CHARSET=utf8mb4, which older MariaDB rejects. Add a streaming rewrite of utf8mb4_0900_* to utf8mb4_unicode_ci (only when the target reports MariaDB) before sourcing the dump",
+  "maintainer": "Fix either by avoiding such collations or by replacing them in the backup manager, e.g. sed s/utf8mb4_0900_ai_ci/utf8mb4_unicode_ci/g on the dump",
+  "notes": "Replacement helper is unit-testable. Avoiding the collation would need migrations (X). Newer MariaDB releases (10.11.11, 11.4.5 and later, to be verified) accept utf8mb4_0900_* as aliases, which lowers urgency. Dump can be large, so stream instead of reading into memory",
+  "user_visible": true,
+  "priority": 2,
+  "confidence": "med"
+ },
+ {
+  "number": 2588,
+  "title": "WildFly log cleanup does not work (logs grow without limit)",
+  "kind": "bug",
+  "area": "server",
+  "category": "L",
+  "fixed_commit": "",
+  "files": [
+   "docker/wildfly/standalone.xml"
+  ],
+  "effort": "S",
+  "risk": "low",
+  "cause": "20b29d392 (2023-11-29) replaced the size-rotating-file-handler with max-backup-index 20 by a periodic-rotating-file-handler without any backup limit in docker/wildfly/standalone.xml, so daily server.log files are never pruned. The same file sets org.wildfly.security to TRACE, which inflates the logs",
+  "maintainer": "Own note: try size-rotating-file-handler with rotate-size 100m and max-backup-index 5 for server.log and access_log",
+  "notes": "Only the Docker config is in this repo. The installer standalone.xml lives elsewhere and existing installs are not updated. Needs a running WildFly to verify. A docker-only config PR would be S if the maintainer wants it",
+  "user_visible": false,
+  "priority": 0,
+  "confidence": "med"
+ },
+ {
+  "number": 2448,
+  "title": "Case header without line wrap pushes buttons off screen on laptops",
+  "kind": "bug",
+  "area": "client-ui",
+  "category": "F",
+  "fixed_commit": "",
+  "files": [
+   "j-lawyer-client/src/main/java/com/jdimension/jlawyer/client/editors/files/ArchiveFilePanel.java",
+   "j-lawyer-client/src/main/java/com/jdimension/jlawyer/client/editors/files/ArchiveFilePanel.form"
+  ],
+  "effort": "S",
+  "risk": "low",
+  "cause": "In ArchiveFilePanel.initComponents lblHeaderInfo (file number + Kurzrubrum + wegen) is added to the horizontal group with default sizes, so its minimum width equals the full text width and forces the whole panel wider than the window. Set min size 0 in the .form/.java (JLabel then truncates with an ellipsis) and put the full text in a tooltip, or wrap via HTML",
+  "maintainer": "",
+  "notes": "Duplicate of #1323 (same cause, one PR closes both). Editor pane is no longer a scroll pane, so the overflow is clipped. Must keep the .form in sync for the NetBeans GUI builder",
+  "user_visible": true,
+  "priority": 4,
+  "confidence": "high"
+ },
+ {
+  "number": 2371,
+  "title": "New case: lawyer, assistant and subject field lost after next new case",
+  "kind": "bug",
+  "area": "client-ui",
+  "category": "R",
+  "fixed_commit": "",
+  "files": [
+   "j-lawyer-client/src/main/java/com/jdimension/jlawyer/client/editors/files/ArchiveFilePanel.java",
+   "j-lawyer-client/src/main/java/com/jdimension/jlawyer/client/editors/files/NewArchiveFilePanel.java",
+   "j-lawyer-client/src/main/java/com/jdimension/jlawyer/client/editors/EditorsRegistry.java"
+  ],
+  "effort": "M",
+  "risk": "med",
+  "cause": "Not confirmed. The three fields are exactly those clearInputs() resets (cmbLawyer, cmbAssistant, cmbSubjectField). Suspect path: confirmSave() keeps the saved case in the singleton NewArchiveFilePanel (setArchiveFileDTO), and re-selecting New Case returns early in EditorsRegistry.setMainEditorsPaneView (same component, no reset), so later edits and saves can hit the saved case",
+  "maintainer": "",
+  "notes": "Exact click sequence and version unknown (2024), no maintainer reply. Needs a reproducible sequence before a fix",
+  "user_visible": true,
+  "priority": 0,
+  "confidence": "low"
+ },
+ {
+  "number": 2351,
+  "title": "Logo and wordmark on splash/login look blurry",
+  "kind": "bug",
+  "area": "client-ui",
+  "category": "D",
+  "fixed_commit": "",
+  "files": [
+   "j-lawyer-client/src/main/java/com/jdimension/jlawyer/client/LoginDialog.java"
+  ],
+  "effort": "S",
+  "risk": "low",
+  "cause": "LoginDialog shows /images/j-lawyer-logo-125px.png (125x102 raster), which gets upscaled and blurred under OS display scaling. Needs a higher-resolution or vector asset (multi-resolution image or SVG icon)",
+  "maintainer": "",
+  "notes": "Cosmetic, depends on a design asset from the project, not a code bug",
+  "user_visible": true,
+  "priority": 0,
+  "confidence": "med"
+ },
+ {
+  "number": 2289,
+  "title": "No scrolling of the folder list while dragging documents into folders",
+  "kind": "bug",
+  "area": "client-ui",
+  "category": "F",
+  "fixed_commit": "",
+  "files": [
+   "j-lawyer-client/src/main/java/com/jdimension/jlawyer/ui/folders/FolderListCell.java",
+   "j-lawyer-client/src/main/java/com/jdimension/jlawyer/ui/folders/FoldersListPanel.java",
+   "j-lawyer-client/src/main/java/com/jdimension/jlawyer/ui/folders/CaseFolderPanel.java"
+  ],
+  "effort": "S",
+  "risk": "low",
+  "cause": "Each FolderListCell registers its own DropTarget with an empty dragOver() and neither the cells nor FoldersListPanel implement java.awt.dnd.Autoscroll. Native DnD swallows mouse wheel events on Windows/Linux, so folders outside the viewport are unreachable. Implement edge autoscroll (Autoscroll interface or dragOver near the viewport edge calling scrollRectToVisible)",
+  "maintainer": "",
+  "notes": "Commenter proposes auto-scroll at the top/bottom edge, works already on macOS. Scroll-step logic can live in a small testable helper, manual check on Linux/Windows. Same file as the already covered FolderListCell.drop() fix, sequence the PRs. Related to #2781",
+  "user_visible": true,
+  "priority": 3,
+  "confidence": "med"
+ },
+ {
+  "number": 2223,
+  "title": "Messaging area lacks a heading",
+  "kind": "other",
+  "area": "client-ui",
+  "category": "D",
+  "fixed_commit": "",
+  "files": [
+   "j-lawyer-client/src/main/java/com/jdimension/jlawyer/client/messenger/MessagingCenterPanel.java"
+  ],
+  "effort": "S",
+  "risk": "low",
+  "cause": "Unclear which view the screenshot shows. MessagingCenterPanel has had the title Nachrichten since its first version f18b2f740 (2023-09-19), so it is likely another messaging area (case tab or desktop)",
+  "maintainer": "",
+  "notes": "Labelled question, cosmetic, location and expected heading unclear without the screenshot",
+  "user_visible": true,
+  "priority": 0,
+  "confidence": "low"
+ },
+ {
+  "number": 2111,
+  "title": "Contacts: encryption label at top right touches the window edge",
+  "kind": "bug",
+  "area": "contacts",
+  "category": "F",
+  "fixed_commit": "",
+  "files": [
+   "j-lawyer-client/src/main/java/com/jdimension/jlawyer/client/editors/addresses/AddressPanel.java",
+   "j-lawyer-client/src/main/java/com/jdimension/jlawyer/client/editors/addresses/AddressPanel.form"
+  ],
+  "effort": "S",
+  "risk": "low",
+  "cause": "The top-level horizontal group in AddressPanel.initComponents only has a leading addContainerGap() and no trailing gap (the .form lacks the closing EmptySpace), so jPanel23 with chkEncryption/lblEncryption and the tab pane run flush to the right edge. ArchiveFilePanel has the trailing gap",
+  "maintainer": "Asked whether OS scaling is used (reporter: 105 percent on Windows 10)",
+  "notes": "One EmptySpace in the .form plus addContainerGap() in the generated code. Cosmetic but trivially reviewable",
+  "user_visible": true,
+  "priority": 2,
+  "confidence": "high"
+ },
+ {
+  "number": 1900,
+  "title": "Server does not listen on IPv6",
+  "kind": "bug",
+  "area": "server",
+  "category": "L",
+  "fixed_commit": "",
+  "files": [
+   "docker/wildfly/standalone.conf",
+   "docker/wildfly/standalone.xml"
+  ],
+  "effort": "S",
+  "risk": "med",
+  "cause": "WildFly is started with -Djava.net.preferIPv4Stack=true (WildFly default and docker/wildfly/standalone.conf), so all sockets bind to 0.0.0.0 only. This is installer/runtime configuration, not j-lawyer code",
+  "maintainer": "",
+  "notes": "Installer configs are not in this repo, needs an IPv6 or dual-stack environment to verify. Client launchers also force preferIPv4Stack (related #1881)",
+  "user_visible": true,
+  "priority": 0,
+  "confidence": "high"
+ },
+ {
+  "number": 1779,
+  "title": "RAM monitor counts page cache as used, constant warnings on Linux",
+  "kind": "bug",
+  "area": "server",
+  "category": "F",
+  "fixed_commit": "",
+  "files": [
+   "j-lawyer-server/j-lawyer-server-war/src/main/java/com/jdimension/jlawyer/timer/SystemMonitorTask.java",
+   "j-lawyer-server/j-lawyer-server-ejb/src/main/java/com/jdimension/jlawyer/services/SystemManagement.java"
+  ],
+  "effort": "S",
+  "risk": "low",
+  "cause": "SystemMonitorTask.getPhysicalMemStatusLevel and SystemManagement.getMonitoringSnapshot use OperatingSystemMXBean.getFreePhysicalMemorySize(), which on Linux returns MemFree (sysinfo freeram) and so counts buffers/cache as used. Read MemAvailable from /proc/meminfo on Linux (fallback to the MXBean) in one shared helper",
+  "maintainer": "RAM check can be disabled. An external library apparently counts buffered RAM as used (it is actually the JDK MXBean)",
+  "notes": "Code unchanged since the initial commit 674bb3ade. Parsing /proc/meminfo is unit-testable. The two duplicated calculations should share the helper",
+  "user_visible": true,
+  "priority": 3,
+  "confidence": "high"
+ },
+ {
+  "number": 1500,
+  "title": "Calendar: case changes (Rubrum) not pushed to Nextcloud events",
+  "kind": "bug",
+  "area": "calendar",
+  "category": "F",
+  "fixed_commit": "",
+  "files": [
+   "j-lawyer-server/j-lawyer-server-ejb/src/main/java/com/jdimension/jlawyer/services/ArchiveFileService.java",
+   "j-lawyer-server/j-lawyer-server-ejb/src/main/java/com/jdimension/jlawyer/services/CalendarSyncService.java"
+  ],
+  "effort": "S",
+  "risk": "low",
+  "cause": "CalendarSyncService.getEventSummary/getEventDescription embed file number, name, reason and lawyer of the case, but ArchiveFileService.updateArchiveFile never calls calendarSync.eventUpdated for the open events (it only fires CaseUpdatedEvent, observed solely by CustomHooksService). Only the optional twice-daily full sync would refresh them",
+  "maintainer": "",
+  "notes": "Fix: inject CalendarSyncServiceLocal and push open reviews when these fields changed (capture old values before edit). Change-detection helper unit-testable, end-to-end check needs a Nextcloud (Docker). Touches the same service as openspec add-bidirectional-nextcloud-calendar-sync, which does not cover this case",
+  "user_visible": true,
+  "priority": 3,
+  "confidence": "high"
+ },
+ {
+  "number": 1323,
+  "title": "Long Kurzrubrum/wegen widens the case editor, labels unreachable",
+  "kind": "bug",
+  "area": "client-ui",
+  "category": "F",
+  "fixed_commit": "",
+  "files": [
+   "j-lawyer-client/src/main/java/com/jdimension/jlawyer/client/editors/files/ArchiveFilePanel.java",
+   "j-lawyer-client/src/main/java/com/jdimension/jlawyer/client/editors/files/ArchiveFilePanel.form"
+  ],
+  "effort": "S",
+  "risk": "low",
+  "cause": "Same as #2448: lblHeaderInfo has minimum width = text width in the ArchiveFilePanel GroupLayout, so the panel grows beyond the screen and tags/buttons are cut off without a scrollbar",
+  "maintainer": "",
+  "notes": "Duplicate of #2448 (older report). Fix both in one PR (min size 0 plus tooltip or wrapping)",
+  "user_visible": true,
+  "priority": 4,
+  "confidence": "high"
+ },
+ {
+  "number": 1107,
+  "title": "Owner group and permissions can be overwritten from a stale open case",
+  "kind": "bug",
+  "area": "server",
+  "category": "F",
+  "fixed_commit": "",
+  "files": [
+   "j-lawyer-server/j-lawyer-server-ejb/src/main/java/com/jdimension/jlawyer/services/ArchiveFileService.java",
+   "j-lawyer-server/j-lawyer-server-ejb/src/main/java/com/jdimension/jlawyer/server/utils/SecurityUtils.java",
+   "j-lawyer-client/src/main/java/com/jdimension/jlawyer/client/editors/files/ArchiveFileDetailLoadAction.java"
+  ],
+  "effort": "M",
+  "risk": "med",
+  "cause": "Owner-only editing of group and allowed groups is enforced only in the client at load time (ArchiveFileDetailLoadAction sets tblGroups/cmbGroups enabled). updateArchiveFile and updateAllowedGroups only call SecurityUtils.checkGroupsForCase, which accepts owner OR allowed groups, so a user with an outdated view can save the old group/permissions",
+  "maintainer": "Scenario 5 is a bug: on save the server must check whether the user may still change it. Without an owner group there is intentionally no access protection, docs should say so",
+  "notes": "Only scenario 5 is a code bug, the rest is documentation or by design. Add an owner check (owner group null or caller member) when group or allowed groups change, mirroring the client rule. Security sensitive, check REST v1/v2 and BulkEditCasePermissions paths",
+  "user_visible": true,
+  "priority": 2,
+  "confidence": "med"
+ },
+ {
+  "number": 1055,
+  "title": "Documents: inconsistent context menu actions on multi-selection",
+  "kind": "bug",
+  "area": "documents",
+  "category": "F",
+  "fixed_commit": "",
+  "files": [
+   "j-lawyer-client/src/main/java/com/jdimension/jlawyer/client/editors/files/ArchiveFilePanel.java"
+  ],
+  "effort": "S",
+  "risk": "low",
+  "cause": "Partly fixed: copy/move to another case now handles all selected documents. Still open: mnuRenameDocumentActionPerformed silently returns when more than one document is selected and mnuOpenDocumentActionPerformed opens only get(0), while showDocumentsPopup never disables these single-document items for multi-selection",
+  "maintainer": "",
+  "notes": "Minimal fix: in showDocumentsPopup enable rename/open only for a single selection (keeping the readOnly/archived rule from setReadOnly). Opening all selected is a UX choice, disabling is the safe option",
+  "user_visible": true,
+  "priority": 2,
+  "confidence": "med"
  }
 ]
