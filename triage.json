@@ -126,6 +126,27 @@
   "confidence": "med"
  },
  {
+  "number": 3424,
+  "title": "beAstie: Anzeigename statt Dateiname bei Anzeige und lokalem Speichern",
+  "kind": "bug",
+  "area": "beA",
+  "category": "F",
+  "fixed_commit": "",
+  "files": [
+   "j-lawyer-server-api/src/main/java/com/jdimension/jlawyer/services/bea/rest/BeaAttachment.java",
+   "j-lawyer-client/src/main/java/com/jdimension/jlawyer/client/bea/BeaMessageContentUI.java",
+   "j-lawyer-client/src/main/java/com/jdimension/jlawyer/client/utils/AttachmentListCellRenderer.java"
+  ],
+  "effort": "S",
+  "risk": "low",
+  "cause": "Regression from beAstie migration e43b2b0e8: BeaAttachment.toString() returns only the alias, the old wrapper Attachment.toString() returned \"(alias) fileName\" (verified with javap on j-lawyer-proprietary/libs/j-lawyer-bea-wrapper.jar). AttachmentListCellRenderer and BeaMessageContentUI.mnuSaveAsFile/mnuSearchSave use toString() as list text and default file name, so the extension is lost. The cancel error is an NPE in BeaMessageContentUI.mnuSearchSaveActionPerformed: FileUtils.preserveExtension(att.getName(), newName) is called before the null check when getNewFileName() returns null (introduced by 72e71b7ab).",
+  "maintainer": "",
+  "notes": "Two small topics, best as two PRs: (1) restore \"(alias) name\" in BeaAttachment.toString (unit-testable), (2) null check before preserveExtension on cancel (trivially reviewable). The wish to use \"(alias) name\" also in the bulk save of a whole message (BeaInboxPanel uses att.getName()) and the long-term unique-id idea are enhancements, keep out of scope. Related to #1743 (aliases now shown again).",
+  "user_visible": true,
+  "priority": 5,
+  "confidence": "high"
+ },
+ {
   "number": 3407,
   "title": "Dateinamen beim Kopieren/Verschieben von Dokumenten beibehalten",
   "kind": "enhancement",
@@ -142,6 +163,110 @@
   "cause": "ArchiveFilePanel.copyOrMoveDocumentsToOtherCase() calls FileUtils.getNewFileName() once per selected document with applyNameTemplate=move, so every document gets a dialog and a move also applies the name template. The server copyDocumentsToCase/moveDocumentsToCase already falls back to the source name when no new name is given.",
   "maintainer": "",
   "notes": "Client-only change in one method: for a multi-selection ask once whether to keep the existing names, skip the per-document dialog and template, and fall back to the dialog only on a name clash (doesDocumentExist), since addDocumentImpl throws on duplicates. UI pattern (one upfront question vs a 'fuer alle' option) should be confirmed with j-dimension. Not endorsed by the maintainer yet.",
+  "user_visible": true,
+  "priority": 3,
+  "confidence": "med"
+ },
+ {
+  "number": 3397,
+  "title": "beA: Weiterleitung ohne XJustiz-Strukturdatensatz",
+  "kind": "bug",
+  "area": "beA",
+  "category": "L",
+  "fixed_commit": "",
+  "files": [
+   "j-lawyer-client/src/main/java/com/jdimension/jlawyer/client/bea/BeaInboxPanel.java",
+   "j-lawyer-client/src/main/java/com/jdimension/jlawyer/client/bea/SendBeaMessageAction.java",
+   "j-lawyer-server/j-lawyer-server-ejb/src/main/java/com/jdimension/jlawyer/services/BeaService.java"
+  ],
+  "effort": "S",
+  "risk": "med",
+  "cause": "Hypothesis: BeaInboxPanel.cmdForwardActionPerformed copies every entry of msg.getAttachments() as a plain attachment, including the original xjustiz_nachricht.xml and other technical attachments, so beAstie (which generates the outgoing SDS, not our code) probably sees an existing xjustiz_nachricht.xml and skips or replaces its own SDS.",
+  "maintainer": "Issue filed by j-dimension himself.",
+  "notes": "SDS generation happens inside the external beAstie service, so the effect of skipping technical attachments on forward can only be verified against a live beA/beAstie. Candidate fix is small (skip isTechnicalAttachment / xjustiz_nachricht.xml in the forward loop).",
+  "user_visible": true,
+  "priority": 0,
+  "confidence": "med"
+ },
+ {
+  "number": 3396,
+  "title": "beAstie: Papierkorb leeren funktioniert nicht",
+  "kind": "bug",
+  "area": "beA",
+  "category": "L",
+  "fixed_commit": "",
+  "files": [
+   "j-lawyer-client/src/main/java/com/jdimension/jlawyer/client/bea/BeaAccess.java",
+   "j-lawyer-client/src/main/java/com/jdimension/jlawyer/client/bea/BeaInboxPanel.java",
+   "j-lawyer-server/j-lawyer-server-ejb/src/main/java/com/jdimension/jlawyer/services/BeaService.java",
+   "j-lawyer-server-api/src/main/java/com/jdimension/jlawyer/services/BeaServiceRemote.java"
+  ],
+  "effort": "M",
+  "risk": "med",
+  "cause": "BeaAccess.deleteMessage() and BeaAccess.moveMessageToTrash() are identical, both call BeaService.deleteMessage() -> DELETE /api/v1/postboxes/{safeId}/messages/{id}, which in beAstie moves to trash. For a message already in the trash BRAK answers 0119 already in trash. No permanent-delete call exists. In cmdDeleteActionPerformed the per-message Throwable is only logged, so deleting single messages in the trash silently does nothing.",
+  "maintainer": "",
+  "notes": "Needs a permanent-delete endpoint in the external beAstie service (not in this repo, unknown whether it exists) plus server and client plumbing, verification only with live beA. The silent swallowing of errors in cmdDelete could be a tiny separate fix but does not solve the issue.",
+  "user_visible": true,
+  "priority": 0,
+  "confidence": "high"
+ },
+ {
+  "number": 3384,
+  "title": "beAstie: in der Akte gespeicherte eEB-Abgabe nicht lesbar",
+  "kind": "bug",
+  "area": "beA",
+  "category": "R",
+  "fixed_commit": "",
+  "files": [
+   "j-lawyer-client/src/main/java/com/jdimension/jlawyer/client/bea/BeaMessageContentUI.java",
+   "j-lawyer-client/src/main/java/com/jdimension/jlawyer/client/bea/BeaAccess.java",
+   "j-lawyer-client/src/main/java/com/jdimension/jlawyer/client/editors/documents/viewer/BeaPanel.java"
+  ],
+  "effort": "M",
+  "risk": "med",
+  "cause": "Not located. The eEB is stored by BeaMessageContentUI.saveEebResponse() as a .bea export of the BeaMessage returned by beAstie (/eeb/confirm). If that response carries attachments without content, opening it later depends on ensureAttachmentContent() reloading from the postbox. For an outgoing eEB (zuruecklaufend) cmdEebShow only renders getEebAsHtml(null, xml), which is the #917 limitation.",
+  "maintainer": "",
+  "notes": "The screenshot content is unknown, need the error text and ideally the stored .bea file to reproduce offline. Possibly overlaps #917 (eEB response rendered without the request pair). Side finding: cmdEebShow decodes the SDS with new String(data) using the platform charset (cp1252 on Windows with Java 17).",
+  "user_visible": true,
+  "priority": 0,
+  "confidence": "low"
+ },
+ {
+  "number": 3373,
+  "title": "beAstie: Absender / Empfaenger nur noch mit Nachname",
+  "kind": "bug",
+  "area": "beA",
+  "category": "L",
+  "fixed_commit": "",
+  "files": [
+   "j-lawyer-server/j-lawyer-server-ejb/src/main/java/com/jdimension/jlawyer/services/BeaService.java",
+   "j-lawyer-client/src/main/java/com/jdimension/jlawyer/client/bea/BeaMessageContentUI.java"
+  ],
+  "effort": "S",
+  "risk": "low",
+  "cause": "BeaService.parseMessage()/parseMessageHeader() take senderName and recipients[].name verbatim from the beAstie JSON and BeaMessageContentUI.setMessageImpl() displays them unchanged, so the short name is produced by the external beAstie service, not by j-lawyer code.",
+  "maintainer": "j-dimension: update the beAstie Docker image, the missing Unser Zeichen has been fixed there for a while.",
+  "notes": "Reporter asks whether only the Unser Zeichen part was fixed. Needs a check against a current beAstie image. A fix (if still needed) belongs in beAstie, not in this repo.",
+  "user_visible": true,
+  "priority": 0,
+  "confidence": "med"
+ },
+ {
+  "number": 3363,
+  "title": "beAstie: Fehlermeldung beim Verschieben in den Papierkorb",
+  "kind": "bug",
+  "area": "beA",
+  "category": "F",
+  "fixed_commit": "",
+  "files": [
+   "j-lawyer-client/src/main/java/com/jdimension/jlawyer/client/bea/BeaInboxPanel.java",
+   "j-lawyer-client/src/main/java/com/jdimension/jlawyer/client/bea/BeaAccess.java"
+  ],
+  "effort": "S",
+  "risk": "low",
+  "cause": "BeaInboxPanel.drop() always calls BeaAccess.moveMessageToFolder() (PUT .../move), also when the target BeaFolder has type TRASH, BRAK rejects a move into the trash and only accepts delete. Fix: if BeaFolder.TYPE_TRASH equals target.getType() call bea.moveMessageToTrash(source.getSafeId(), m) instead.",
+  "maintainer": "j-dimension: the BRAK API distinguishes move-to-folder from delete (move to trash), the UI must handle it separately, he wanted to look at it.",
+  "notes": "Cause confirmed by maintainer, fix is a few lines and reuses the moveMessageToTrash path that already works via the trash button, so it is reviewable without live beA. Moving out of the trash via drag and drop (restore) is a separate question. Check with j-dimension first since he said he would look at it. Related to #3396.",
   "user_visible": true,
   "priority": 3,
   "confidence": "med"
@@ -208,6 +333,26 @@
   "notes": "Behaviour defined by analogy with the existing voice memo button. Header = the table + <hr/> that AddNoteFrame prepends, so strip up to the first <hr> and convert HTML to plain text with paragraph breaks (Jsoup), which is a unit-testable helper. LibreOfficeAccess already handles multi-paragraph INGO_TEXT. Needs the .form update. iradraconis' context-menu/Ingo idea overlaps #2934 and should stay out of scope.",
   "user_visible": true,
   "priority": 3,
+  "confidence": "med"
+ },
+ {
+  "number": 3230,
+  "title": "Aktenvorschlag anhand Aktenzeichen auch bei eEB-Abgabe",
+  "kind": "bug",
+  "area": "beA",
+  "category": "F",
+  "fixed_commit": "",
+  "files": [
+   "j-lawyer-client/src/main/java/com/jdimension/jlawyer/client/bea/BeaMessageContentUI.java",
+   "j-lawyer-client/src/main/java/com/jdimension/jlawyer/client/editors/documents/SearchAndAssignDialog.java"
+  ],
+  "effort": "S",
+  "risk": "low",
+  "cause": "BeaMessageContentUI.saveEebResponse() builds the SearchAndAssignDialog context from msgContainer reference fields plus response.getSubject()/getBody() of the eEB message returned by beAstie, not the subject/body of the incoming message, so a file number that is only in the original subject is never matched (the inbox save path in BeaInboxPanel uses m.getSubject()+m.getBody()).",
+  "maintainer": "",
+  "notes": "One-line fix: add msgContainer.getSubject()/getBody() to the context (could be extracted to a small static helper for a unit test). Caveats: SearchAndAssignDialog only matches against the 150 last-changed cases and lowercases the context but not getFileNumber(), so file numbers with capital letters never match (separate small bug affecting all callers). Only applies when the eEB is given from the inbox, from inside a case no dialog is shown.",
+  "user_visible": true,
+  "priority": 4,
   "confidence": "med"
  },
  {
@@ -498,6 +643,90 @@
   "confidence": "high"
  },
  {
+  "number": 2843,
+  "title": "Priorität für Kalendereinträge und Benachrichtigungen (Desktop)",
+  "kind": "enhancement",
+  "area": "calendar",
+  "category": "X",
+  "fixed_commit": "",
+  "files": [
+   "j-lawyer-client/src/main/java/com/jdimension/jlawyer/client/desktop/ReviewsDueTimerTask.java",
+   "j-lawyer-server-entities/src/main/java/com/jdimension/jlawyer/persistence/ArchiveFileReviewsBean.java",
+   "j-lawyer-client/src/main/java/com/jdimension/jlawyer/client/desktop/TaggedTimerTask.java"
+  ],
+  "effort": "M",
+  "risk": "med",
+  "cause": "Desktop due list is sorted by type, day, time, case id in the comparator of ReviewsDueTimerTask (around line 859). Calendar entries have neither a priority nor a creation date column (ArchiveFileReviewsBean), so a priority sort key needs a new case_events column.",
+  "maintainer": "Likes priorities as a simple secondary sort key within a day (instead of configurable multi-criteria sorting), also suggests an optional per-entry notification with prominent display or popup shortly before appointments.",
+  "notes": "Needs schema change (priority column, plus REST, web, sync). The notification part is largely covered by event reminders (79b864dad, close #3285: reminder_minutes, ReminderNotificationDialog, archived openspec add-calendar-reminders).",
+  "user_visible": true,
+  "priority": 0,
+  "confidence": "high"
+ },
+ {
+  "number": 2786,
+  "title": "KI-gestützter Import von Zeiten in Zeiterfassungsprojekt",
+  "kind": "enhancement",
+  "area": "finance",
+  "category": "D",
+  "fixed_commit": "",
+  "files": [
+   "j-lawyer-client/src/main/java/com/jdimension/jlawyer/client/assistant/ToolRegistry.java",
+   "j-lawyer-server/j-lawyer-server-ejb/src/main/java/com/jdimension/jlawyer/services/TimesheetService.java"
+  ],
+  "effort": "M",
+  "risk": "low",
+  "cause": "Issue body is empty. Ingo tool calling already offers get_open_timesheets_for_case and create_timesheet_position (ToolRegistry, added in 8d0af59c7 on 2026-03-10), so a list of times pasted into the Ingo chat can already be turned into timesheet positions.",
+  "maintainer": "Opened by j-dimension without any description.",
+  "notes": "Scope undefined (dedicated import dialog vs. chat). Probably obsolete through the Ingo timesheet tools, maintainer should confirm and close or specify what is missing.",
+  "user_visible": true,
+  "priority": 0,
+  "confidence": "med"
+ },
+ {
+  "number": 2736,
+  "title": "Abwesenheiten im Datumsauswahl-Popup hervorheben",
+  "kind": "enhancement",
+  "area": "calendar",
+  "category": "D",
+  "fixed_commit": "",
+  "files": [
+   "j-lawyer-client/src/main/java/com/jdimension/jlawyer/client/components/MultiCalDialog.java",
+   "j-lawyer-client/src/main/java/com/jdimension/jlawyer/client/components/MultiCalDialog.form",
+   "j-lawyer-client/src/main/java/com/jdimension/jlawyer/client/calendar/CalendarUtils.java"
+  ],
+  "effort": "M",
+  "risk": "med",
+  "cause": "MultiCalDialog shows three plain com.toedter JDayChooser instances (jcalendar 1.3.2, which has no IDateEvaluator), days are never decorated. Conflicts with absences are only detected after saving via CalendarUtils.checkForConflicts (#1274).",
+  "maintainer": "Confirmed with the reporter that this is about the small date selection popup.",
+  "notes": "Needs decisions: whose entries (current user vs. selected assignee, the popup is used in about 28 places without that context), which entries count as absence, colours, hover tooltips, extra server query per 3-month range. Overlaps #299 (holiday colouring in the same popup), a shared day-decoration mechanism would serve both.",
+  "user_visible": true,
+  "priority": 0,
+  "confidence": "high"
+ },
+ {
+  "number": 2693,
+  "title": "Erweiterungen Aktenanlageassistent (Dokument direkt zuordnen)",
+  "kind": "enhancement",
+  "area": "e-mail",
+  "category": "D",
+  "fixed_commit": "",
+  "files": [
+   "j-lawyer-client/src/main/java/com/jdimension/jlawyer/client/mail/sidebar/CreateNewCasePanel.java",
+   "j-lawyer-client/src/main/java/com/jdimension/jlawyer/client/mail/sidebar/ConfirmationStep.java",
+   "j-lawyer-client/src/main/java/com/jdimension/jlawyer/client/mail/sidebar/SaveToCasePanel.java",
+   "j-lawyer-client/src/main/java/com/jdimension/jlawyer/client/editors/documents/ScannerPanel.java"
+  ],
+  "effort": "M",
+  "risk": "med",
+  "cause": "Five of six checklist items are done (65698fcd3, 7b71d5dc8 and later wizard work). The remaining item is open: the wizard (CreateNewCasePanel.cmdNewCaseActionPerformed, ConfirmationStep.display) creates case, parties and calendar entry but never stores the source e-mail (or the scan, ScannerPanel.openCreateCaseWizard) in the new case.",
+  "maintainer": "Checklist written by j-dimension, the last open item is 'Dokument zuordnen direkt bei Anlageassistent'.",
+  "notes": "Open questions: save as .eml or with separate attachments, name template, folder, document tags, behaviour for the scanner source. Would duplicate SaveToCasePanel logic unless refactored. Not a tiny PR.",
+  "user_visible": true,
+  "priority": 0,
+  "confidence": "med"
+ },
+ {
   "number": 2592,
   "title": "Backup restore fails on MariaDB with utf8mb4_0900_ai_ci collation",
   "kind": "bug",
@@ -535,6 +764,70 @@
   "user_visible": false,
   "priority": 0,
   "confidence": "med"
+ },
+ {
+  "number": 2563,
+  "title": "Scans automatisch zuordnen (OCR, verakten und taggen)",
+  "kind": "enhancement",
+  "area": "documents",
+  "category": "X",
+  "fixed_commit": "",
+  "files": [
+   "j-lawyer-server/j-lawyer-server-war/src/main/java/com/jdimension/jlawyer/timer/DirectoryObserverTask.java",
+   "j-lawyer-server/j-lawyer-server-war/src/main/java/com/jdimension/jlawyer/timer/MailboxScannerTask.java",
+   "j-lawyer-client/src/main/java/com/jdimension/jlawyer/client/editors/documents/ScannerPanel.java",
+   "j-lawyer-server/j-lawyer-server-ejb/src/main/java/com/jdimension/jlawyer/services/IntegrationService.java"
+  ],
+  "effort": "L",
+  "risk": "high",
+  "cause": "Not implemented. Automatic mail filing lives server-side in MailboxScannerTask.processMailboxViaService (file number in subject/body, sender, CC, TO, default case). Scans only get manual case suggestions in ScannerPanel.loadCaseSuggestionsAsync (text-based file number match).",
+  "maintainer": "Opened by j-dimension: analogous to the automatic assignment of mails.",
+  "notes": "Large server feature with configuration (enable flag, tags, ambiguity handling, OCR timing, see sequential OCR fix f74f50d9e). Automatically moving files out of the scan inbox is risky.",
+  "user_visible": true,
+  "priority": 0,
+  "confidence": "high"
+ },
+ {
+  "number": 2469,
+  "title": "Geburtstage als Wiedervorlage",
+  "kind": "enhancement",
+  "area": "contacts",
+  "category": "D",
+  "fixed_commit": "",
+  "files": [
+   "j-lawyer-server-entities/src/main/java/com/jdimension/jlawyer/persistence/AddressBean.java",
+   "j-lawyer-client/src/main/java/com/jdimension/jlawyer/client/desktop/ReviewsDueTimerTask.java",
+   "j-lawyer-client/src/main/java/com/jdimension/jlawyer/client/editors/addresses/AddressPanel.java"
+  ],
+  "effort": "M",
+  "risk": "med",
+  "cause": "Not implemented. AddressBean stores a birth date, but nothing creates birthday reminders and the desktop shows no birthdays.",
+  "maintainer": "",
+  "notes": "A per-contact option needs a new address column (schema, X). Follow-ups are always bound to a case (archiveFileKey), so a yearly birthday follow-up needs a design decision (which case, recurrence). A desktop birthday widget without schema would be an alternative.",
+  "user_visible": true,
+  "priority": 0,
+  "confidence": "high"
+ },
+ {
+  "number": 2452,
+  "title": "Sortierung beA-Nachricht vs. eEB-Abgabe innerhalb der Akte",
+  "kind": "bug",
+  "area": "beA",
+  "category": "R",
+  "fixed_commit": "",
+  "files": [
+   "j-lawyer-client/src/main/java/com/jdimension/jlawyer/client/bea/BeaInboxPanel.java",
+   "j-lawyer-client/src/main/java/com/jdimension/jlawyer/client/bea/BeaMessageContentUI.java",
+   "j-lawyer-client/src/main/java/com/jdimension/jlawyer/ui/folders/CaseFolderPanel.java"
+  ],
+  "effort": "S",
+  "risk": "low",
+  "cause": "Not located. The bulk save path sets the message document date to the reception time (BeaInboxPanel, bulkEntry.setDocumentDate(m.getReceptionTime()) since 5f48b1b76) and saveEebResponse() stores the eEB with the current time, CaseFolderPanel sorts by the full creation timestamp, so the chronological order should already be correct.",
+  "maintainer": "",
+  "notes": "Old report (2024) against the previous document list UI, which has since been replaced (5bbc007de). Need the exact import path and timestamps from the reporter, or a re-test on current master. Expected order is not fully specified.",
+  "user_visible": true,
+  "priority": 0,
+  "confidence": "low"
  },
  {
   "number": 2448,
@@ -576,6 +869,27 @@
   "user_visible": true,
   "priority": 0,
   "confidence": "low"
+ },
+ {
+  "number": 2353,
+  "title": "Dokumenterstellen-Dialog für kleine Bildschirme optimieren",
+  "kind": "other",
+  "area": "documents",
+  "category": "R",
+  "fixed_commit": "",
+  "files": [
+   "j-lawyer-client/src/main/java/com/jdimension/jlawyer/client/editors/files/AddDocumentFromTemplateDialog.java",
+   "j-lawyer-client/src/main/java/com/jdimension/jlawyer/client/editors/files/AddDocumentFromTemplateDialog.form",
+   "j-lawyer-client/src/main/java/com/jdimension/jlawyer/client/editors/files/PartiesPanel.java"
+  ],
+  "effort": "M",
+  "risk": "low",
+  "cause": "Layout problem on low resolutions (screenshot only). Since then 388d4f43c (2024-11-28, issue #2689) replaced the vertical split of placeholders and parties with tabs, and the dialog sizes itself via FrameUtils.fitDialogToScreen(this, 85f).",
+  "maintainer": "Mitigated by shortening role names, low priority. Other dialogs need their own ticket including the horizontal resolution.",
+  "notes": "Original screenshot not reviewable here. Likely improved by the 2024-11 tab layout, needs a re-check by the reporter on the current version with the screen resolution before any change. Swing layout is not headless verifiable.",
+  "user_visible": true,
+  "priority": 0,
+  "confidence": "med"
  },
  {
   "number": 2351,
@@ -657,6 +971,27 @@
   "confidence": "high"
  },
  {
+  "number": 2064,
+  "title": "Automatische Dokumentetiketten pro Nutzer",
+  "kind": "enhancement",
+  "area": "documents",
+  "category": "D",
+  "fixed_commit": "",
+  "files": [
+   "j-lawyer-server/j-lawyer-server-ejb/src/main/java/com/jdimension/jlawyer/services/ArchiveFileService.java",
+   "j-lawyer-server-entities/src/main/java/com/jdimension/jlawyer/persistence/DocumentTagRuleCondition.java",
+   "j-lawyer-client/src/main/java/com/jdimension/jlawyer/client/configuration/TagRulesDialog.java"
+  ],
+  "effort": "M",
+  "risk": "med",
+  "cause": "Automatic tagging exists only as DocumentTagRule, whose conditions match the document name (ArchiveFileService around line 2339). There is no condition on the acting user.",
+  "maintainer": "A list of relevant actions must be defined first, some actions (convert to PDF, extract a mail attachment) must not trigger the automatic tag.",
+  "notes": "Needs a product definition of the triggering actions. A user condition in tag rules probably needs a new condition attribute (schema). Not F.",
+  "user_visible": true,
+  "priority": 0,
+  "confidence": "high"
+ },
+ {
   "number": 1900,
   "title": "Server does not listen on IPv6",
   "kind": "bug",
@@ -672,6 +1007,28 @@
   "cause": "WildFly is started with -Djava.net.preferIPv4Stack=true (WildFly default and docker/wildfly/standalone.conf), so all sockets bind to 0.0.0.0 only. This is installer/runtime configuration, not j-lawyer code",
   "maintainer": "",
   "notes": "Installer configs are not in this repo, needs an IPv6 or dual-stack environment to verify. Client launchers also force preferIPv4Stack (related #1881)",
+  "user_visible": true,
+  "priority": 0,
+  "confidence": "high"
+ },
+ {
+  "number": 1828,
+  "title": "Gruppe als Verantwortliche für WV oder Termin",
+  "kind": "other",
+  "area": "calendar",
+  "category": "X",
+  "fixed_commit": "",
+  "files": [
+   "j-lawyer-server-entities/src/main/java/com/jdimension/jlawyer/persistence/ArchiveFileReviewsBean.java",
+   "j-lawyer-client/src/main/java/com/jdimension/jlawyer/client/editors/files/NewEventPanel.java",
+   "j-lawyer-client/src/main/java/com/jdimension/jlawyer/client/desktop/ReviewsDueTimerTask.java",
+   "j-lawyer-server/j-lawyer-server-ejb/src/main/java/com/jdimension/jlawyer/services/CalendarService.java"
+  ],
+  "effort": "L",
+  "risk": "high",
+  "cause": "The assignee is a single user name string (ArchiveFileReviewsBean.assignee). Group assignment needs a new column or encoding plus changes to desktop filters, conflict checks, notifications, Nextcloud sync, REST and web.",
+  "maintainer": "",
+  "notes": "Cross-cutting data model change, not a small PR.",
   "user_visible": true,
   "priority": 0,
   "confidence": "high"
@@ -697,6 +1054,88 @@
   "confidence": "high"
  },
  {
+  "number": 1765,
+  "title": "Bidirektionale Kalendersynchronisation (Nextcloud)",
+  "kind": "enhancement",
+  "area": "calendar",
+  "category": "X",
+  "fixed_commit": "",
+  "files": [
+   "j-lawyer-server/j-lawyer-server-ejb/src/main/java/com/jdimension/jlawyer/services/CalendarSyncService.java",
+   "j-lawyer-cloud/src/main/java/org/jlawyer/cloud/NextcloudCalendarConnector.java",
+   "openspec/changes/add-bidirectional-nextcloud-calendar-sync/proposal.md"
+  ],
+  "effort": "L",
+  "risk": "high",
+  "cause": "CalendarSyncService only pushes entries to Nextcloud, NextcloudCalendarConnector.getAllEvents() exists but is unused.",
+  "maintainer": "Detailed ctag/etag/href sync plan in the issue body (2023-11-07), users offered sponsoring.",
+  "notes": "Active openspec change add-bidirectional-nextcloud-calendar-sync (d2fc89478, 0 of 38 tasks done) targets exactly this. Needs schema (etag, href, last-modified per entry). Large.",
+  "user_visible": true,
+  "priority": 0,
+  "confidence": "high"
+ },
+ {
+  "number": 1743,
+  "title": "beA: Anzeigenamen von Gerichtsdokumenten werden nicht angezeigt",
+  "kind": "bug",
+  "area": "beA",
+  "category": "FIXED",
+  "fixed_commit": "e43b2b0e8",
+  "files": [
+   "j-lawyer-server/j-lawyer-server-ejb/src/main/java/com/jdimension/jlawyer/services/BeaService.java",
+   "j-lawyer-server-api/src/main/java/com/jdimension/jlawyer/services/bea/rest/BeaAttachment.java"
+  ],
+  "effort": "S",
+  "risk": "low",
+  "cause": "Old client-side beA wrapper only got the alias after the message had been decrypted in beA web. Since the beAstie migration (e43b2b0e8) BeaService.parseAttachmentList() reads the alias from beAstie and BeaAttachment.toString() displays it.",
+  "maintainer": "",
+  "notes": "Obsolete with beAstie, the same reporter confirms in #3424 (2026-06) that aliases are displayed now (even too prominently). Closing should reference #3424, which restores \"(alias) filename\".",
+  "user_visible": true,
+  "priority": 0,
+  "confidence": "med"
+ },
+ {
+  "number": 1730,
+  "title": "beA: Notare finden - beN integrieren",
+  "kind": "bug",
+  "area": "beA",
+  "category": "L",
+  "fixed_commit": "",
+  "files": [
+   "j-lawyer-client/src/main/java/com/jdimension/jlawyer/client/bea/BeaIdentitySearchThread.java",
+   "j-lawyer-server/j-lawyer-server-ejb/src/main/java/com/jdimension/jlawyer/services/BeaService.java",
+   "j-lawyer-client/src/main/java/com/jdimension/jlawyer/client/bea/IdentityPanel.java"
+  ],
+  "effort": "M",
+  "risk": "med",
+  "cause": "Identity search is fully delegated to beAstie (POST /api/v1/identities/search via BeaService.searchIdentity), so whether notaries (beN postboxes) are found depends on the BRAK/beAstie search, not on client logic. IdentityPanel already handles null fields via StringUtils.nonEmpty.",
+  "maintainer": "",
+  "notes": "Reporter suspects a BRAK interface limitation. Verifying search and sending to beN needs live beA and a notary postbox. Old report (2022, pre-beAstie), worth a re-test.",
+  "user_visible": true,
+  "priority": 0,
+  "confidence": "med"
+ },
+ {
+  "number": 1596,
+  "title": "beA: eEB-Anforderung nach Abgabe unveraendert angezeigt",
+  "kind": "bug",
+  "area": "beA",
+  "category": "D",
+  "fixed_commit": "",
+  "files": [
+   "j-lawyer-client/src/main/java/com/jdimension/jlawyer/client/bea/BeaMessageContentUI.java",
+   "j-lawyer-client/src/main/java/com/jdimension/jlawyer/client/bea/BeaMessageTableCellRenderer.java"
+  ],
+  "effort": "M",
+  "risk": "med",
+  "cause": "The eEB-done state only lives in the in-memory flag BeaMessageContentUI.eebSubmitted (reset per displayed message), lblEeb is driven by msg.isEebRequested() from beAstie, there is no persisted answered state.",
+  "maintainer": "j-dimension: the BRAK interface has no service to query this status, only a local mailbox image would help, which is a lot of work.",
+  "notes": "Needs a design decision on where to persist the answered state (DB, tag, document metadata) or a beAstie feature. Not a small PR.",
+  "user_visible": true,
+  "priority": 0,
+  "confidence": "high"
+ },
+ {
   "number": 1500,
   "title": "Calendar: case changes (Rubrum) not pushed to Nextcloud events",
   "kind": "bug",
@@ -717,6 +1156,46 @@
   "confidence": "high"
  },
  {
+  "number": 1411,
+  "title": "beA: Laufzettel Umlaute falsch dargestellt",
+  "kind": "bug",
+  "area": "beA",
+  "category": "L",
+  "fixed_commit": "",
+  "files": [
+   "j-lawyer-server/j-lawyer-server-ejb/src/main/java/com/jdimension/jlawyer/services/BeaService.java",
+   "j-lawyer-client/src/main/java/com/jdimension/jlawyer/client/bea/BeaMessageContentUI.java"
+  ],
+  "effort": "S",
+  "risk": "low",
+  "cause": "Classic UTF-8 read as ISO-8859-1 (ausgefÃ¼hrt) in the OSCI feedback text. Since the beAstie migration the process card (osciMessage, entries[].text) arrives as JSON via HttpClient BodyHandlers.ofString() (UTF-8 default) and is shown unchanged, so the mis-decoding, if still present, happens inside beAstie or upstream.",
+  "maintainer": "j-dimension: same cause as #1003, sample received by e-mail, blocked by lack of time.",
+  "notes": "Report predates beAstie (2021), needs a re-test with a German EGVP Laufzettel against live beA. No client/server decoding step found in this repo.",
+  "user_visible": true,
+  "priority": 0,
+  "confidence": "low"
+ },
+ {
+  "number": 1343,
+  "title": "beA: Ordner \"in Akte importiert\" fehlt in \"gesendet\"",
+  "kind": "bug",
+  "area": "beA",
+  "category": "D",
+  "fixed_commit": "",
+  "files": [
+   "j-lawyer-client/src/main/java/com/jdimension/jlawyer/client/bea/BeaInboxPanel.java",
+   "j-lawyer-client/src/main/java/com/jdimension/jlawyer/client/bea/BeaAccess.java"
+  ],
+  "effort": "S",
+  "risk": "med",
+  "cause": "BeaAccess.getFolderStructure() creates/caches exactly one imported folder per postbox under the inbox, and the save-to-case code in BeaInboxPanel always moves to BeaAccess.getImportedFolder(), so a message from Gesendet is moved across top-level folders, which BRAK rejects.",
+  "maintainer": "j-dimension: sent messages are usually stored in the case automatically anyway (questions the need).",
+  "notes": "Options: skip the move when the source is not under the inbox (minimal) or create an imported subfolder per top-level folder (reporter wish). Choice needs maintainer decision and verification needs live beA.",
+  "user_visible": true,
+  "priority": 0,
+  "confidence": "med"
+ },
+ {
   "number": 1323,
   "title": "Long Kurzrubrum/wegen widens the case editor, labels unreachable",
   "kind": "bug",
@@ -734,6 +1213,27 @@
   "notes": "Duplicate of #2448 (older report). Fix both in one PR (min size 0 plus tooltip or wrapping)",
   "user_visible": true,
   "priority": 4,
+  "confidence": "high"
+ },
+ {
+  "number": 1145,
+  "title": "Fristen / WV mit wählbarem Vorlauf auf dem Desktop anzeigen",
+  "kind": "enhancement",
+  "area": "calendar",
+  "category": "FIXED",
+  "fixed_commit": "106027841",
+  "files": [
+   "j-lawyer-client/src/main/java/com/jdimension/jlawyer/client/desktop/DueDaysSettings.java",
+   "j-lawyer-client/src/main/java/com/jdimension/jlawyer/client/desktop/DesktopPanel.java",
+   "j-lawyer-client/src/main/java/com/jdimension/jlawyer/client/desktop/ReviewsDueTimerTask.java"
+  ],
+  "effort": "S",
+  "risk": "low",
+  "cause": "106027841 (2025-10-24, close #3010) added days into the future to the Fällig widget, fb507da60 (2026-08-21, #3555) made the past and future window configurable per type (Termine, Fristen, Wiedervorlagen) with 0, 1, 3, 7, 14, 31 days ahead, persisted in user settings via DueDaysSettings.",
+  "maintainer": "The off-topic desktop layout question belongs in a separate ticket.",
+  "notes": "Matches the request exactly, including separate lead times for Fristen and WV. Can be closed with reference to #3010 and #3555.",
+  "user_visible": true,
+  "priority": 0,
   "confidence": "high"
  },
  {
@@ -758,6 +1258,47 @@
   "confidence": "med"
  },
  {
+  "number": 1077,
+  "title": "DSGVO Löschplan",
+  "kind": "enhancement",
+  "area": "other",
+  "category": "D",
+  "fixed_commit": "",
+  "files": [
+   "j-lawyer-server-entities/src/main/java/com/jdimension/jlawyer/persistence/ArchiveFileBean.java",
+   "j-lawyer-client/src/main/java/com/jdimension/jlawyer/client/editors/files/QuickArchiveFileSearchPanel.java",
+   "j-lawyer-server/j-lawyer-server-ejb/src/main/java/com/jdimension/jlawyer/services/ArchiveFileService.java"
+  ],
+  "effort": "L",
+  "risk": "high",
+  "cause": "Not implemented. ArchiveFileBean already has date_archived, so finding cases archived longer than X months is possible without schema changes.",
+  "maintainer": "A first step could be a dialog listing all cases archived longer than x months for deletion, optionally with automatic removal of contacts only involved in those cases. Full deletion plans judged too costly for their value. Linked to #221.",
+  "notes": "Mass deletion of cases and contacts is high risk and needs decisions (retention 6 vs 10 years, delete vs tag or archive, contact cleanup rules, no automatic deletion per community). Not a small PR.",
+  "user_visible": true,
+  "priority": 0,
+  "confidence": "high"
+ },
+ {
+  "number": 1064,
+  "title": "Übersicht über verwendete Dokumentetiketten",
+  "kind": "enhancement",
+  "area": "documents",
+  "category": "D",
+  "fixed_commit": "",
+  "files": [
+   "j-lawyer-client/src/main/java/com/jdimension/jlawyer/client/editors/files/ArchiveFilePanel.java",
+   "j-lawyer-client/src/main/java/com/jdimension/jlawyer/ui/tagging/TagUtils.java"
+  ],
+  "effort": "S",
+  "risk": "low",
+  "cause": "The case-level overview is still only an HTML tooltip on the document tag filter button (ArchiveFilePanel.updateDocumentTagsOverview, TagUtils.getDocumentTagsOverviewAsHtml). Since 5bbc007de (2026-09-26) the active tags are shown on every document (chips in the list view, Etiketten column in the table view).",
+  "maintainer": "Should be visible at a glance again, layout still unclear.",
+  "notes": "Layout decision open. The per-document tag chips from add-document-metadata-and-views may already satisfy the at-a-glance goal, maintainer could close. Small once a layout is chosen.",
+  "user_visible": true,
+  "priority": 0,
+  "confidence": "med"
+ },
+ {
   "number": 1055,
   "title": "Documents: inconsistent context menu actions on multi-selection",
   "kind": "bug",
@@ -775,5 +1316,252 @@
   "user_visible": true,
   "priority": 2,
   "confidence": "med"
+ },
+ {
+  "number": 1011,
+  "title": "beA: Fehler nach Versand einer Nachricht mit ca. 7 MB",
+  "kind": "bug",
+  "area": "beA",
+  "category": "R",
+  "fixed_commit": "",
+  "files": [
+   "j-lawyer-client/src/main/java/com/jdimension/jlawyer/client/bea/SendBeaMessageAction.java"
+  ],
+  "effort": "M",
+  "risk": "med",
+  "cause": "Not located. Report from 1.13 (2020) concerns the old client-side beA wrapper, which was replaced by the server-side beAstie integration in e43b2b0e8, the error text is only in a screenshot.",
+  "maintainer": "",
+  "notes": "Very likely obsolete, suggest asking the reporter to re-test on 3.x and close. No reproducible info.",
+  "user_visible": true,
+  "priority": 0,
+  "confidence": "med"
+ },
+ {
+  "number": 935,
+  "title": "beA: Nachrichtenfenster verzoegert beim Wechsel der Nachrichten",
+  "kind": "bug",
+  "area": "beA",
+  "category": "FIXED",
+  "fixed_commit": "555e02712",
+  "files": [
+   "j-lawyer-client/src/main/java/com/jdimension/jlawyer/client/bea/BeaInboxPanel.java"
+  ],
+  "effort": "S",
+  "risk": "low",
+  "cause": "555e02712 (2025-11-13) added BeaInboxPanel.displayMessage(): the content pane is cleared immediately on click/arrow key, loading is debounced (200 ms) and done in a SwingWorker with getMessageWithoutAttachments (attachments lazy). Earlier attempt ba33ed70c (2020).",
+  "maintainer": "j-dimension asked whether #1406 improved it, reporter said yes but still noticeable with many attachments.",
+  "notes": "The requested behaviour (empty pane right after selecting another message) is implemented, the remaining spinner wish is cosmetic. Can be closed.",
+  "user_visible": true,
+  "priority": 0,
+  "confidence": "high"
+ },
+ {
+  "number": 917,
+  "title": "beA: eEB-Anzeige fehlerhaft / leer",
+  "kind": "bug",
+  "area": "beA",
+  "category": "D",
+  "fixed_commit": "",
+  "files": [
+   "j-lawyer-client/src/main/java/com/jdimension/jlawyer/client/bea/BeaMessageContentUI.java",
+   "j-lawyer-server/j-lawyer-server-ejb/src/main/java/com/jdimension/jlawyer/services/BeaService.java"
+  ],
+  "effort": "L",
+  "risk": "med",
+  "cause": "A returning eEB (zuruecklaufend) only references the request via XJustiz message ids, BeaMessageContentUI.cmdEebShowActionPerformed renders getEebAsHtml(null, xml) without the matching request (TODO comment references #917), so case and document info are missing.",
+  "maintainer": "j-dimension: BRAK confirmed the link exists only in the encrypted SDS, a KSW must store or search the whole mailbox to find the request, not feasible for now.",
+  "notes": "Needs a design for locating the request (local message store or searching saved .bea documents by Nachrichten-ID), effectively a large feature. Possibly related to #3384.",
+  "user_visible": true,
+  "priority": 0,
+  "confidence": "high"
+ },
+ {
+  "number": 663,
+  "title": "beA: Reihenfolge aendern fuehrt zu Alias-Aenderung",
+  "kind": "bug",
+  "area": "beA",
+  "category": "D",
+  "fixed_commit": "",
+  "files": [
+   "j-lawyer-client/src/main/java/com/jdimension/jlawyer/client/bea/SendBeaMessageFrame.java"
+  ],
+  "effort": "S",
+  "risk": "low",
+  "cause": "SendBeaMessageFrame.updateAlias() regenerates every alias as NN_Schriftsatz/Anlage_ + text after the last underscore and falls back to the file name when the user removed all underscores, so a free alias like Test is replaced on every reorder/checkbox change.",
+  "maintainer": "j-dimension: alias generation is intended (court wish for numbering per ERVV), text after the prefix is preserved, unclear whether anything should change.",
+  "notes": "Reporters want a free alias without automatism. Changing the generation rules is a product decision. 1339b606d (2020) only preserved the suffix.",
+  "user_visible": true,
+  "priority": 0,
+  "confidence": "high"
+ },
+ {
+  "number": 453,
+  "title": "Fristen / Wiedervorlagen an Dokumente koppeln",
+  "kind": "enhancement",
+  "area": "calendar",
+  "category": "X",
+  "fixed_commit": "",
+  "files": [
+   "j-lawyer-server-entities/src/main/java/com/jdimension/jlawyer/persistence/ArchiveFileReviewsBean.java",
+   "j-lawyer-client/src/main/java/com/jdimension/jlawyer/client/editors/files/NewEventPanel.java",
+   "j-lawyer-client/src/main/java/com/jdimension/jlawyer/client/editors/files/AddDocumentFromTemplateDialog.java",
+   "j-lawyer-client/src/main/java/com/jdimension/jlawyer/client/editors/files/ArchiveFilePanel.java"
+  ],
+  "effort": "L",
+  "risk": "med",
+  "cause": "Not on master, case_events has no document reference. An implementation exists on the unmerged upstream branch feat/mentionsDocumentsInDueDate (41dc62c62 plus 2 commits, 2025-09, Maximilian Steinert) with migration V3_4_0_8__EventsDocumentContext.sql.",
+  "maintainer": "",
+  "notes": "Schema change. The branch migration version V3_4_0_8 clashes with master's V3_4_0_8__TimesheetsNameIncrease.sql, so the branch needs renumbering and a rebase by its author. The 2025-09-11 comment by iradraconis shows that branch.",
+  "user_visible": true,
+  "priority": 0,
+  "confidence": "high"
+ },
+ {
+  "number": 330,
+  "title": "Adressen: Export als vCard",
+  "kind": "enhancement",
+  "area": "contacts",
+  "category": "F",
+  "fixed_commit": "",
+  "files": [
+   "j-lawyer-client/src/main/java/com/jdimension/jlawyer/client/editors/addresses/QuickAddressSearchPanel.java",
+   "j-lawyer-client/src/main/java/com/jdimension/jlawyer/client/editors/addresses/QuickAddressSearchPanel.form",
+   "j-lawyer-cloud/src/main/java/org/jlawyer/cloud/NextcloudContactsConnector.java",
+   "j-lawyer-client/src/main/java/com/jdimension/jlawyer/client/configuration/ImportContactsDialog.java"
+  ],
+  "effort": "M",
+  "risk": "low",
+  "cause": "Not implemented in the desktop client. Only vCard import (ImportContactsDialog) and CardDAV push (NextcloudContactsConnector.getVCard, private, works on CloudContact) exist. ez-vcard is already a client dependency.",
+  "maintainer": "Opened by j-dimension, labelled good first issue and hacktoberfest-accepted, links the docs topic on exporting addresses.",
+  "notes": "Suggested PR: new client helper mapping AddressBean to an ezvcard VCard (unit-testable, mirror the CardDAV mapping incl. EMAIL PREF from the contact-emails spec) plus an 'Als vCard exportieren' item in popupAddressActions that writes one .vcf for the selected contacts. Needs .form update. No schema.",
+  "user_visible": true,
+  "priority": 3,
+  "confidence": "med"
+ },
+ {
+  "number": 299,
+  "title": "Feiertage im Datumsauswahl-Kalender farblich absetzen",
+  "kind": "enhancement",
+  "area": "calendar",
+  "category": "F",
+  "fixed_commit": "",
+  "files": [
+   "j-lawyer-client/src/main/java/com/jdimension/jlawyer/client/components/MultiCalDialog.java",
+   "j-lawyer-client/src/main/java/com/jdimension/jlawyer/client/components/MultiCalDialog.form",
+   "j-lawyer-client/src/main/java/com/jdimension/jlawyer/client/calendar/CalendarUtils.java"
+  ],
+  "effort": "M",
+  "risk": "low",
+  "cause": "MultiCalDialog uses plain JDayChooser (jcalendar 1.3.2). Holidays are only checked after the click in selectDate (warning dialog), never rendered. Holidays per year are available via CalendarServiceRemote.getAllHolidays(year, country, region) with the current user's country and area code (UserSettings.getCurrentUser()).",
+  "maintainer": "",
+  "notes": "Suggested PR: JDayChooser subclass that recolours holiday day buttons after drawDays() (verify protected API of jcalendar 1.3.2) with the holiday name as tooltip, per-year holiday cache in CalendarUtils (unit-testable), swap the three choosers in MultiCalDialog and its .form. Not endorsed by the maintainer yet and overlaps #2736 (absences in the same popup), so ask j-dimension whether holidays alone are welcome. Reporter wanted it at least optional.",
+  "user_visible": true,
+  "priority": 2,
+  "confidence": "med"
+ },
+ {
+  "number": 256,
+  "title": "Aktensuche - Etikettenfilter Mehrfachauswahl",
+  "kind": "enhancement",
+  "area": "client-ui",
+  "category": "FIXED",
+  "fixed_commit": "657b9dc65",
+  "files": [
+   "j-lawyer-client/src/main/java/com/jdimension/jlawyer/ui/tagging/TagUtils.java",
+   "j-lawyer-client/src/main/java/com/jdimension/jlawyer/ui/StayOpenCheckBoxMenuItem.java",
+   "j-lawyer-client/src/main/java/com/jdimension/jlawyer/client/editors/files/QuickArchiveFileSearchPanel.java"
+  ],
+  "effort": "S",
+  "risk": "low",
+  "cause": "657b9dc65 (2025-09-12, #1050) switched the tag filter popups built by TagUtils.populateTags (used by QuickArchiveFileSearchPanel for case and document tags) to StayOpenCheckBoxMenuItem, so several tags can be selected or deselected without reopening the popup.",
+  "maintainer": "",
+  "notes": "Core complaint solved. The proposed extra buttons (clear, OK, cancel, edit tags) do not exist but were only a suggested means. Can be closed, effectively a duplicate of #1050.",
+  "user_visible": true,
+  "priority": 0,
+  "confidence": "high"
+ },
+ {
+  "number": 241,
+  "title": "Unterstützung mehrerer Aktenkreise (Nummernbereiche)",
+  "kind": "enhancement",
+  "area": "server",
+  "category": "X",
+  "fixed_commit": "",
+  "files": [
+   "j-lawyer-server/j-lawyer-server-ejb/src/main/java/com/jdimension/jlawyer/server/utils/CaseNumberGenerator.java",
+   "j-lawyer-client/src/main/java/com/jdimension/jlawyer/client/configuration/CaseNumberingConfigurationDialog.java",
+   "j-lawyer-server/j-lawyer-server-ejb/src/main/java/com/jdimension/jlawyer/services/ArchiveFileService.java",
+   "j-lawyer-server-common/src/main/java/com/jdimension/jlawyer/server/services/settings/ServerSettingsKeys.java"
+  ],
+  "effort": "L",
+  "risk": "high",
+  "cause": "Only one numbering scheme exists (ServerSettingsKeys.SERVERCONF_CASENUMBERING_PATTERN, CaseNumberGenerator). There is no concept of several number ranges or of choosing one at case creation.",
+  "maintainer": "Reformulated: several case ranges with different schemes or the same scheme with a different minimum counter, selection mandatory at case creation once more than one range exists.",
+  "notes": "Large feature touching numbering, case creation in client, wizard, REST and web, likely new configuration storage.",
+  "user_visible": true,
+  "priority": 0,
+  "confidence": "high"
+ },
+ {
+  "number": 235,
+  "title": "Massenänderungen an Akten (z.B. Anwalt wechseln)",
+  "kind": "enhancement",
+  "area": "client-ui",
+  "category": "D",
+  "fixed_commit": "",
+  "files": [
+   "j-lawyer-client/src/main/java/com/jdimension/jlawyer/client/editors/files/QuickArchiveFileSearchPanel.java",
+   "j-lawyer-client/src/main/java/com/jdimension/jlawyer/client/editors/files/BulkEditCasePermissions.java",
+   "j-lawyer-server/j-lawyer-server-ejb/src/main/java/com/jdimension/jlawyer/services/ArchiveFileService.java"
+  ],
+  "effort": "M",
+  "risk": "med",
+  "cause": "Not implemented. The case search popup has bulk actions (duplicate, delete, sync on or off, permissions via BulkEditCasePermissions from 4f3378121, #3203) but none to change lawyer or assistant on several cases, nor to reassign calendar entries in bulk.",
+  "maintainer": "Asks which other bulk changes come into question (scope open).",
+  "notes": "A 'change lawyer or assistant for selected cases' action modelled on BulkEditCasePermissions would be a contained M-size PR, but the scope (which fields, also reassigning open calendar entries as asked in the comment) needs maintainer agreement first.",
+  "user_visible": true,
+  "priority": 0,
+  "confidence": "high"
+ },
+ {
+  "number": 212,
+  "title": "Startseite/Übersichtsseite für HTML-Exporte",
+  "kind": "enhancement",
+  "area": "server",
+  "category": "F",
+  "fixed_commit": "",
+  "files": [
+   "j-lawyer-server/j-lawyer-server-war/src/main/java/com/jdimension/jlawyer/timer/IterativeBackupTask.java",
+   "j-lawyer-server/j-lawyer-server-ejb/src/main/java/com/jdimension/jlawyer/export/AdvancedHtmlExport.java",
+   "j-lawyer-server/j-lawyer-server-ejb/src/main/java/com/jdimension/jlawyer/services/ArchiveFileService.java"
+  ],
+  "effort": "M",
+  "risk": "low",
+  "cause": "The scheduled HTML export in IterativeBackupTask (export location of the backup job) writes one folder per case plus wiedervorlagen-fristen.csv but no root index. Only the manual batch export ArchiveFileService.loadHtmlCaseExport (7e32e930d, f2c459b08, #3108 and #3109) writes a root index.html, in input order and without HTML escaping of case names.",
+  "maintainer": "Taken as 'maybe' for an upcoming version (2019).",
+  "notes": "Suggested PR: extract the root index writer into AdvancedHtmlExport (static, HTML-escaped, unit-testable) and call it at the end of the IterativeBackupTask export loop with cases sorted by last change (getLastChangedForArchiveFile is already computed there), plus a second page sorted by file number. Already partly addressed for the manual batch export.",
+  "user_visible": true,
+  "priority": 2,
+  "confidence": "med"
+ },
+ {
+  "number": 44,
+  "title": "Archivierung: Archivnummer und/oder Aktenstandort",
+  "kind": "enhancement",
+  "area": "other",
+  "category": "X",
+  "fixed_commit": "",
+  "files": [
+   "j-lawyer-server-entities/src/main/java/com/jdimension/jlawyer/persistence/ArchiveFileBean.java",
+   "j-lawyer-client/src/main/java/com/jdimension/jlawyer/client/editors/files/ArchiveFilePanel.java"
+  ],
+  "effort": "L",
+  "risk": "med",
+  "cause": "Not implemented. ArchiveFileBean has date_archived but no archive number, storage location or archive note.",
+  "maintainer": "Data model extension planned: archive number (running number plus year), archive date, location, archive note, searchable by archive date, to be done together with #332. Workaround: archive number generator in the calculations plus a renamed custom case field.",
+  "notes": "Schema change plus numbering logic and UI. The archive confirmation idea from the comments is a separate topic.",
+  "user_visible": true,
+  "priority": 0,
+  "confidence": "high"
  }
 ]
