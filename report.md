@@ -14,7 +14,7 @@
 - `j-lawyer-client/src/main/java/com/jdimension/jlawyer/client/utils/UserUtils.java` +34 -0
 - `j-lawyer-client/src/test/java/org/jlawyer/test/client/utils/UserUtilsTest.java` +710 -0
 
-Gesamt: 8 files changed, 756 insertions(+), 6 deletions(-). Davon sind 660 Zeilen der AGPL-Lizenzkopf von `UserUtilsTest.java`, wie bei den anderen Tests in `org/jlawyer/test/client/utils`. Ohne Kopf sind es 50 Zeilen Test.
+Gesamt: 8 files changed, 756 insertions(+), 6 deletions(-). Davon sind 663 Zeilen der AGPL-Lizenzkopf von `UserUtilsTest.java`, wie bei den anderen Tests in `org/jlawyer/test/client/utils`. Ohne Kopf sind es 47 Zeilen Test.
 
 ## Build und Tests
 Befehl: `mvn -B -ntp -pl j-lawyer-client -am -Dmaven.test.failure.ignore=true -Dmaven.compiler.release= -Dmaven.compiler.source=17 -Dmaven.compiler.target=17 package`
