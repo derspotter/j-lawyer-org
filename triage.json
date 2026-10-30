@@ -170,6 +170,25 @@
   "confidence": "high"
  },
  {
+  "number": 3507,
+  "title": "PDF aufteilen: Teil-PDFs so gross wie das Original",
+  "kind": "bug",
+  "area": "documents",
+  "category": "F",
+  "fixed_commit": "",
+  "files": [
+   "j-lawyer-client/src/main/java/com/jdimension/jlawyer/client/editors/files/ArchiveFilePanel.java"
+  ],
+  "effort": "S",
+  "risk": "low",
+  "cause": "ArchiveFilePanel.mnuSplitPdfActionPerformed (~l.9700-9725, added 65919d462) copies pages with PDDocument.importPage() only. Link annotations (/Dest, /P) still point to pages of the source document, so every part drags the whole source page tree into the saved file. PDFBox Splitter.processAnnotations() removes these refs, which is why the scanner split (PDFSplitAction uses Splitter) is fine",
+  "maintainer": "Could not reproduce, PDFs got smaller in all test setups, asked for a sample PDF (reporter then attached the BGB PDF and parts).",
+  "notes": "Fits the BGB sample from gesetze-im-internet (TOC/cross links), the last part without links is small. Privacy relevant: a part sent to court/opponent contains the full original. Fix: use org.apache.pdfbox.multipdf.Splitter (start/end page) or null the link destinations and annotation /P like Splitter does, ideally in a small helper with a unit test that builds a PDF with GoTo links and asserts part size and no foreign page refs. Same loop also drops inherited /Resources (importPage warns). Not done by Stirling, the reporter's guess is wrong.",
+  "user_visible": true,
+  "priority": 5,
+  "confidence": "med"
+ },
+ {
   "number": 3499,
   "title": "Windows 11: invisible dialogs pile up behind the main window",
   "kind": "bug",
@@ -289,6 +308,25 @@
   "user_visible": true,
   "priority": 0,
   "confidence": "med"
+ },
+ {
+  "number": 3410,
+  "title": "Tabellen aus Rechnern: Schriftgroesse falsch, Breite 85%",
+  "kind": "bug",
+  "area": "documents",
+  "category": "F",
+  "fixed_commit": "",
+  "files": [
+   "j-lawyer-server-common/src/main/java/org/jlawyer/plugins/calculation/StyledCalculationTable.java"
+  ],
+  "effort": "S",
+  "risk": "low",
+  "cause": "StyledCalculationTable.toHtml() (clipboard path) converts the configured size with pixelFontSizeToHtmlSize() into HTML <font size=1..7> using px thresholds, so 16 becomes size 3 (12pt in LO/Word) and 12 becomes size 1 (about 7pt). The ODT/DOCX paths use the same value as pt. Table width is hardcoded width=85%",
+  "maintainer": "",
+  "notes": "Exactly matches the report (16 gives 12pt). Fix: emit CSS font-size in pt per cell (style=font-size:Npt) and width 100% (or a setting). Unit-test the generated HTML. Width change is a small product choice, maybe confirm with maintainer. Same method also never closes <b>/<i>/<u> (appends opening tags again after the value). Same reporter repeats this in a comment on #3274. Related area to #583.",
+  "user_visible": true,
+  "priority": 4,
+  "confidence": "high"
  },
  {
   "number": 3407,
@@ -438,7 +476,7 @@
  },
  {
   "number": 3371,
-  "title": "Belegdialog: erneutes Bestaetigen von Typ/Nummernkreis verwirft Eingaben",
+  "title": "Belegdialog: erneutes Bestaetigen von Typ/Kreis verwirft Eingaben",
   "kind": "bug",
   "area": "finance",
   "category": "F",
@@ -471,9 +509,9 @@
   "risk": "low",
   "cause": "BeaInboxPanel.drop() always calls BeaAccess.moveMessageToFolder() (PUT .../move), also when the target BeaFolder has type TRASH, BRAK rejects a move into the trash and only accepts delete. Fix: if BeaFolder.TYPE_TRASH equals target.getType() call bea.moveMessageToTrash(source.getSafeId(), m) instead.",
   "maintainer": "j-dimension: the BRAK API distinguishes move-to-folder from delete (move to trash), the UI must handle it separately, he wanted to look at it.",
-  "notes": "Cause confirmed by maintainer, fix is a few lines and reuses the moveMessageToTrash path that already works via the trash button, so it is reviewable without live beA. Moving out of the trash via drag and drop (restore) is a separate question. Check with j-dimension first since he said he would look at it. Related to #3396.",
+  "notes": "Cause confirmed by the maintainer and the fix reuses the working moveMessageToTrash path, but j-dimension said he wanted to look at it himself. Ask him before sending a PR. Restoring out of the trash via drag and drop is a separate question.",
   "user_visible": true,
-  "priority": 3,
+  "priority": 2,
   "confidence": "med"
  },
  {
@@ -511,9 +549,9 @@
   "risk": "low",
   "cause": "AssistantChatPanel.startBackgroundTask adds the placeholder incomingMsgPanel right after the user message, then appends the ToolCallGroupPanel with pnlMessages.add(activeToolGroup) below it and finally writes the answer into incomingMsgPanel, so the answer sits above the tools. Fix by inserting the group at the z-order index of incomingMsgPanel (or moving the panel below the group)",
   "maintainer": "",
-  "notes": "Still present after 9fe6fb8e0 (2026-10-30, grouped and collapsible tool calls), which kept the append order. Reopened stored chats (AiChatTranscript.toEntries) already show tools before the answer, so only the live view is inconsistent. Maintainer is actively working in this file, coordinate to avoid conflicts",
+  "notes": "Still present after 9fe6fb8e0 (2026-10-30, grouped tool calls), which kept the append order. Reopened chats (AiChatTranscript.toEntries) already show tools before the answer, so only the live view is wrong. j-dimension is actively reworking this panel this week, so wait or coordinate to avoid a conflict.",
   "user_visible": true,
-  "priority": 3,
+  "priority": 2,
   "confidence": "high"
  },
  {
@@ -537,6 +575,26 @@
   "user_visible": true,
   "priority": 0,
   "confidence": "high"
+ },
+ {
+  "number": 3274,
+  "title": "Tabelle nicht bearbeitbar mit grafischem Briefkopf (LibreOffice)",
+  "kind": "bug",
+  "area": "documents",
+  "category": "D",
+  "fixed_commit": "",
+  "files": [
+   "j-lawyer-server/j-lawyer-server-ejb/src/main/java/com/jdimension/jlawyer/documents/LibreOfficeAccess.java",
+   "j-lawyer-server/j-lawyer-server-ejb/src/main/java/com/jdimension/jlawyer/documents/MicrosoftOfficeAccess.java"
+  ],
+  "effort": "M",
+  "risk": "med",
+  "cause": "LibreOfficeAccess.mergeImageAsBackground() inserts the letterhead image as a full-page draw:frame anchored to page 1 (run-through background, protect position size, draw:layer layout). LibreOffice still lets clicks hit that frame, which blocks cursor placement and table resizing on page 1",
+  "maintainer": "Cannot reproduce, both suites allow editing tables with the image in background, asked which office suite (answer: LibreOffice on Windows, video provided).",
+  "notes": "Behaviour is LibreOffice GUI interaction, not testable headless. Real fix would be a different embedding (page style background fill for the first page or header image), which is a design decision on the graphics letterhead feature (2e314826d, #1552). The table width/font part in the comments is #3410.",
+  "user_visible": true,
+  "priority": 0,
+  "confidence": "med"
  },
  {
   "number": 3258,
@@ -578,6 +636,26 @@
   "notes": "0958c866a (2026-06-09, 'no pretty printing because it adds unwanted empty paragraphs') sets prettyPrint(false) in exactly these reply branches and in the EmailUtils reply quoting. Not in a release tag yet (latest tag 3.5.0.16 predates it). The remaining one-line <p> gap before the signature is #3402.",
   "user_visible": true,
   "priority": 0,
+  "confidence": "med"
+ },
+ {
+  "number": 3234,
+  "title": "Dokument aus Vorlage: Umbenennen und Beteiligtenrolle ueberschreiben sich",
+  "kind": "bug",
+  "area": "documents",
+  "category": "F",
+  "fixed_commit": "",
+  "files": [
+   "j-lawyer-client/src/main/java/com/jdimension/jlawyer/client/editors/files/AddDocumentFromTemplateDialog.java",
+   "j-lawyer-client/src/main/java/com/jdimension/jlawyer/client/editors/files/PartiesPanel.java"
+  ],
+  "effort": "S",
+  "risk": "low",
+  "cause": "Any change in the parties table fires PartiesPanel listener -> AddDocumentFromTemplateDialog.selectedPartiesUpdated() -> templateSelection(), which always regenerates the name from the name template and calls txtFileName.setText(docName), discarding a name the user typed",
+  "maintainer": "",
+  "notes": "Fix: remember that the user edited txtFileName (DocumentListener flag, reset on template change) and skip the name regeneration on party changes. The other direction (renaming clears the role) could not be found in code, txtFileName has only an Enter key listener, so that part needs clarification. Same pattern may exist in AddAddressDocumentFromTemplateDialog.",
+  "user_visible": true,
+  "priority": 3,
   "confidence": "med"
  },
  {
@@ -971,6 +1049,25 @@
   "confidence": "high"
  },
  {
+  "number": 2923,
+  "title": "Girocode in Word-Vorlagen erscheint hinter dem Text",
+  "kind": "bug",
+  "area": "documents",
+  "category": "R",
+  "fixed_commit": "",
+  "files": [
+   "j-lawyer-server/j-lawyer-server-ejb/src/main/java/com/jdimension/jlawyer/documents/MicrosoftOfficeAccess.java"
+  ],
+  "effort": "S",
+  "risk": "low",
+  "cause": "Not located. MicrosoftOfficeAccess (~l.972-980) adds the Girocode as an inline picture (XWPFRun.addPicture) into a new row/paragraph of the 1x1 placeholder table. A likely cause is a paragraph style with exact line spacing clipping the inline image, or a floating placeholder table in the template",
+  "maintainer": "Opened by maintainer: occurs under unknown conditions, switching layout to in front of text shows it, needs further analysis.",
+  "notes": "Needs a template that shows the effect. Once known, a fix (e.g. set auto line spacing on the new paragraph) is small and testable by checking the generated XML.",
+  "user_visible": true,
+  "priority": 0,
+  "confidence": "low"
+ },
+ {
   "number": 2888,
   "title": "Plain-text mail templates: empty placeholder leaves a double space",
   "kind": "bug",
@@ -1006,6 +1103,26 @@
   "cause": "Likely cause: list-view selection runs in mouseClicked handlers (lblFileNameMouseClicked and siblings) on labels that also carry drag gesture recognizers. On macOS any pointer movement between press and release (Magic Mouse, sensitive mice) suppresses mouseClicked, so the click is lost. Handling selection on mousePressed or mouseReleased with a small tolerance would avoid it",
   "maintainer": "",
   "notes": "Only verifiable on macOS hardware (Linux works per commenter). The table view (CaseDocumentsTable, JTable selection on press) is a workaround. b8d672171 (2026-10-27) touched the same handler for the context menu",
+  "user_visible": true,
+  "priority": 0,
+  "confidence": "med"
+ },
+ {
+  "number": 2877,
+  "title": "PDF-Export einer Akte: Speichern passiert manchmal nicht",
+  "kind": "bug",
+  "area": "documents",
+  "category": "R",
+  "fixed_commit": "",
+  "files": [
+   "j-lawyer-client/src/main/java/com/jdimension/jlawyer/client/editors/files/ExportAsPdfMergeStep.java",
+   "j-lawyer-client/src/main/java/com/jdimension/jlawyer/client/editors/files/ExportAsPdfWizardDialog.java"
+  ],
+  "effort": "M",
+  "risk": "med",
+  "cause": "Not located. ExportAsPdfMergeStep.finishedEvent() silently does nothing when resultFile is null and only logs copy errors. With about 1500 pages an OutOfMemoryError (not caught by catch Exception) in the merge thread is plausible",
+  "maintainer": "Asked for page count (about 1500), then asked for a system report.",
+  "notes": "Not reproducible, reported on 3.1.0.3. The wizard was reworked since (ebaa78f11, 67d6e60f1, 0a7288472 skip failed files and show errors), may already behave differently. Needs a system report/log.",
   "user_visible": true,
   "priority": 0,
   "confidence": "med"
@@ -1093,6 +1210,26 @@
   "confidence": "med"
  },
  {
+  "number": 2828,
+  "title": "Datei zuordnen: PDF-Konvertierung pro Datei waehlbar",
+  "kind": "enhancement",
+  "area": "documents",
+  "category": "D",
+  "fixed_commit": "",
+  "files": [
+   "j-lawyer-client/src/main/java/com/jdimension/jlawyer/client/editors/files/BulkSaveDialog.java",
+   "j-lawyer-client/src/main/java/com/jdimension/jlawyer/client/editors/files/BulkSaveEntry.java"
+  ],
+  "effort": "M",
+  "risk": "med",
+  "cause": "Feature request, BulkSaveEntry has no per-file convert option and there is no server-side document conversion API in ArchiveFileServiceRemote",
+  "maintainer": "Opened by maintainer (customer request): conversion ideally on the server, not on the workstation.",
+  "notes": "Server-side conversion needs a new remote API (Stirling or LibreOffice on server), so a design decision and more than a small PR.",
+  "user_visible": true,
+  "priority": 0,
+  "confidence": "high"
+ },
+ {
   "number": 2814,
   "title": "Pauschalhonorar-Plugin: 400,00 EUR brutto kommt als 399,99 an",
   "kind": "bug",
@@ -1114,6 +1251,26 @@
   "confidence": "high"
  },
  {
+  "number": 2808,
+  "title": "Mail mit JPG-Anhaengen wird fehlerhaft zu PDF konvertiert",
+  "kind": "bug",
+  "area": "documents",
+  "category": "FIXED",
+  "fixed_commit": "e43b2b0e8",
+  "files": [
+   "j-lawyer-client/src/main/java/com/jdimension/jlawyer/client/utils/convert/MimeMessageObject.java",
+   "j-lawyer-client/src/main/java/com/jdimension/jlawyer/client/utils/EmailToPDFConverter.java"
+  ],
+  "effort": "S",
+  "risk": "low",
+  "cause": "The stack trace shows com.sun.xml.ws.encoding.ImageDataContentHandler from rt-2.3.3.jar (JAX-WS, registered via its mailcap) failing in MimeBodyPart.getContent() for image parts. e43b2b0e8 (beA moved to server) removed lib/bea/rt-2.3.3.jar from the client classpath, the jar was deleted in 965826c94, and 92fb0762f already wraps getContent in try/catch",
+  "maintainer": "Asked whether it still occurs, reporter answered not seen for a long time, can be closed.",
+  "notes": "Obsolete, reporter agreed to close. Optional hardening: read image bytes via Part.getInputStream() instead of getContent() in MimeMessageObject.getInlinedImage.",
+  "user_visible": true,
+  "priority": 0,
+  "confidence": "med"
+ },
+ {
   "number": 2786,
   "title": "KI-gestützter Import von Zeiten in Zeiterfassungsprojekt",
   "kind": "enhancement",
@@ -1132,6 +1289,23 @@
   "user_visible": true,
   "priority": 0,
   "confidence": "med"
+ },
+ {
+  "number": 2782,
+  "title": "Fehler in Doku: Platzhalter-Ueberlagerungen, HAUSNR fehlt",
+  "kind": "other",
+  "area": "documents",
+  "category": "X",
+  "fixed_commit": "",
+  "files": [],
+  "effort": "S",
+  "risk": "low",
+  "cause": "Layout problem in the website User Guide (LibreOffice source exported to HTML, tabs overlap), the source is not in this repository",
+  "maintainer": "Source is a LibreOffice document, tabs do not survive the HTML export, could be solved by a borderless table instead of tabs.",
+  "notes": "Cannot be fixed by a PR here (user guide source not in repo). The placeholder exists in code (PlaceHolders._HAUSNR) and in the in-app placeholder catalog (openspec placeholder-catalog).",
+  "user_visible": true,
+  "priority": 0,
+  "confidence": "high"
  },
  {
   "number": 2778,
@@ -1172,6 +1346,26 @@
   "notes": "Self-contained: new server setting key (key/value table, no schema change), a combo in GirocodeConfigurationDialog (plus .form), one purpose-builder helper (unit-testable, max 140 chars) used at both call sites, optionally the girocode settings in ConfigurationEndpointV7. Side finding: cmdGiroCodeActionPerformed parses the total via floatValue(), cent errors possible above roughly 131k EUR.",
   "user_visible": true,
   "priority": 2,
+  "confidence": "med"
+ },
+ {
+  "number": 2745,
+  "title": "Aus manchen PDFs laesst sich kein Text extrahieren (Tika)",
+  "kind": "bug",
+  "area": "documents",
+  "category": "R",
+  "fixed_commit": "",
+  "files": [
+   "j-lawyer-server/j-lawyer-server-ejb/src/main/java/com/jdimension/jlawyer/documents/PreviewGenerator.java",
+   "j-lawyer-server/j-lawyer-server-ejb/src/main/java/com/jdimension/jlawyer/documents/TikaConfigurator.java"
+  ],
+  "effort": "S",
+  "risk": "low",
+  "cause": "PreviewGenerator.createPreview() reads Tika ParsingReader (tika-app 1.22, 2019), Tika throws an IOException on certain PDF date metadata and the text preview is just logged and left empty, there is no fallback",
+  "maintainer": "Opened by maintainer: OCR present, Tika seems to choke on certain date values (pinged iradraconis).",
+  "notes": "No sample PDF in the issue. Possible small fix: for .pdf fall back to PDFBox PDFTextStripper when Tika fails, but it needs a failing PDF to verify. Upgrading Tika would be a large change.",
+  "user_visible": true,
+  "priority": 0,
   "confidence": "med"
  },
  {
@@ -1279,7 +1473,7 @@
  },
  {
   "number": 2641,
-  "title": "E-Rechnung: Zahlungsart ausdifferenzieren (bereits bezahlt, Aufrechnung)",
+  "title": "E-Rechnung: Zahlungsart ausdifferenzieren (bezahlt, Aufrechnung)",
   "kind": "enhancement",
   "area": "finance",
   "category": "D",
@@ -1378,6 +1572,25 @@
   "notes": "A per-contact option needs a new address column (schema, X). Follow-ups are always bound to a case (archiveFileKey), so a yearly birthday follow-up needs a design decision (which case, recurrence). A desktop birthday widget without schema would be an alternative.",
   "user_visible": true,
   "priority": 0,
+  "confidence": "high"
+ },
+ {
+  "number": 2460,
+  "title": "Ablegen als PDF: Rueckfrage bei offenem Dokument, ablegen als ohne Ersetzen",
+  "kind": "bug",
+  "area": "documents",
+  "category": "F",
+  "fixed_commit": "",
+  "files": [
+   "j-lawyer-client/src/main/java/com/jdimension/jlawyer/client/editors/files/ArchiveFilePanel.java"
+  ],
+  "effort": "S",
+  "risk": "low",
+  "cause": "ArchiveFilePanel.mnuDuplicateDocumentAsActionPerformed (ablegen als, ~l.8454) calls remote.addDocument() directly without doesDocumentExist and without the replace/rename/bin cleanup that convertDocumentToPdf (~l.7679) does, so the server throws 'existiert bereits in der Akte oder deren Papierkorb'",
+  "maintainer": "",
+  "notes": "F scope is the second part: reuse the existence check plus replace or rename dialog (incl. removal from the bin) in the ablegen als path. First part is a design point: mnuDuplicateDocumentAsPdfActionPerformed asks 'Aktion auf geoeffnete Dokumente ausfuehren' although convertDocumentToPdf then waits via waitForOpenDocument anyway, the reporter prefers plain waiting.",
+  "user_visible": true,
+  "priority": 3,
   "confidence": "high"
  },
  {
@@ -1544,7 +1757,7 @@
  },
  {
   "number": 2203,
-  "title": "Rechnungsnummernkreis zurueckgesetzt: Fehler bei bereits vergebener Nummer",
+  "title": "Nummernkreis zurueckgesetzt: Fehler bei vergebener Belegnummer",
   "kind": "bug",
   "area": "finance",
   "category": "F",
@@ -1564,7 +1777,7 @@
  },
  {
   "number": 2169,
-  "title": "Belegdialog: Speichern bei offenem Bearbeitungsmodus verwirft Nummernkreis",
+  "title": "Belegdialog: Speichern im Bearbeitungsmodus verwirft Nummernkreis",
   "kind": "bug",
   "area": "finance",
   "category": "F",
@@ -1643,6 +1856,44 @@
   "confidence": "high"
  },
  {
+  "number": 1910,
+  "title": "Textrahmen im Absatz bringt Platzhalter und Skripte durcheinander",
+  "kind": "bug",
+  "area": "documents",
+  "category": "R",
+  "fixed_commit": "",
+  "files": [
+   "j-lawyer-server/j-lawyer-server-ejb/src/main/java/com/jdimension/jlawyer/documents/LibreOfficeAccess.java"
+  ],
+  "effort": "M",
+  "risk": "med",
+  "cause": "Not located in our code. LibreOfficeAccess.setPlaceHolders uses simple-odf 0.8.2 TextNavigation/TextSelection.replaceWith. A draw:frame with text box inside the same text:p most likely shifts the text index mapping, so replacements land at wrong offsets",
+  "maintainer": "",
+  "notes": "Needs the reporter's template (or a constructed ODT with a frame anchored in the paragraph) and debugging inside simple-odf. Any workaround (e.g. handling frame paragraphs separately) touches the core ODT replacement, so medium risk.",
+  "user_visible": true,
+  "priority": 0,
+  "confidence": "low"
+ },
+ {
+  "number": 1901,
+  "title": "Nicht-europaeische Schriftzeichen im Client kaputt (Font Inter)",
+  "kind": "bug",
+  "area": "client-ui",
+  "category": "D",
+  "fixed_commit": "",
+  "files": [
+   "j-lawyer-client/src/main/java/com/jdimension/jlawyer/client/Main.java"
+  ],
+  "effort": "S",
+  "risk": "med",
+  "cause": "Main (~l.811) installs FlatInterFont and sets it as preferred font family. Inter has no CJK/Arabic/Thai glyphs, so missing glyphs show as boxes unless FlatLaf falls back to a composite font",
+  "maintainer": "Confirmed Inter lacks these glyphs, not configurable for end users, workaround is editing defaultFont in FlatIntelliJLaf.properties inside the jar.",
+  "notes": "Reported on macOS with FlatLaf 3.0, client now uses FlatLaf 3.5.4 whose composite font handling may already help, needs a check on macOS. A fix means a font setting or dropping Inter, which is a product decision.",
+  "user_visible": true,
+  "priority": 0,
+  "confidence": "med"
+ },
+ {
   "number": 1900,
   "title": "Server does not listen on IPv6",
   "kind": "bug",
@@ -1699,6 +1950,27 @@
   "notes": "Mostly obsolete for the client (freeze, IPv4) since the server move. What remains: SMTP timeouts on the server (a tiny change that could be split out as an F item) and IPv6 for the server/docker setup (a deployment decision). Verifying needs a real mail server and an IPv6 network. #1883 was split out of this ticket.",
   "user_visible": true,
   "priority": 0,
+  "confidence": "med"
+ },
+ {
+  "number": 1875,
+  "title": "Skript in Vorlage bricht bei Anfuehrungszeichen im Platzhalterwert",
+  "kind": "bug",
+  "area": "documents",
+  "category": "F",
+  "fixed_commit": "",
+  "files": [
+   "j-lawyer-server/j-lawyer-server-ejb/src/main/java/com/jdimension/jlawyer/documents/LibreOfficeAccess.java",
+   "j-lawyer-server/j-lawyer-server-ejb/src/main/java/com/jdimension/jlawyer/documents/MicrosoftOfficeAccess.java",
+   "j-lawyer-server/j-lawyer-server-ejb/src/main/resources/templates/smart/smarttemplate.groovy"
+  ],
+  "effort": "M",
+  "risk": "med",
+  "cause": "Two spots. (1) LibreOfficeAccess.evaluateScript() substitutes bare keys with replaceAll(key, quote+value+quote) without escaping quote, backslash or dollar (Groovy GString and regex replacement). (2) setPlaceHolders (ODT and DOCX) replaces all {{...}} in the whole document before scripts run, so {{GEGNER_NAME}} inside a script string literal becomes raw text with an unescaped quote and Groovy fails",
+  "maintainer": "",
+  "notes": "Expected behaviour is clear. (1) is an S fix with a unit test on evaluateScript. Fully fixing the reporter's script needs (2) as well, e.g. evaluating script blocks before the generic placeholder pass and leaving {{KEY}} literals for that pass, which changes ordering for all script templates, hence M and med risk. Testable with a small generated ODT/DOCX (LibreOfficeODFTest, MicrosoftOfficeDocxTest exist).",
+  "user_visible": true,
+  "priority": 3,
   "confidence": "med"
  },
  {
@@ -1806,6 +2078,26 @@
   "confidence": "med"
  },
  {
+  "number": 1696,
+  "title": "Dateien per Drag and Drop ersetzen",
+  "kind": "enhancement",
+  "area": "documents",
+  "category": "D",
+  "fixed_commit": "",
+  "files": [
+   "j-lawyer-client/src/main/java/com/jdimension/jlawyer/client/editors/files/FileDropSupport.java",
+   "j-lawyer-client/src/main/java/com/jdimension/jlawyer/client/editors/files/DocumentsTransferHandler.java"
+  ],
+  "effort": "M",
+  "risk": "med",
+  "cause": "Feature request, drag and drop always adds a new document",
+  "maintainer": "Plain overwrite would be data loss, at least a confirmation is needed. Suggests duplicating in the case instead, the clean solution is versioning (#862).",
+  "notes": "Maintainer points to versioning (#862), so the behaviour needs a decision first.",
+  "user_visible": true,
+  "priority": 0,
+  "confidence": "high"
+ },
+ {
   "number": 1694,
   "title": "Inline attachments without file name are not shown",
   "kind": "bug",
@@ -1858,12 +2150,12 @@
    "j-lawyer-server/j-lawyer-server-ejb/src/main/java/com/jdimension/jlawyer/services/CalendarSyncService.java"
   ],
   "effort": "S",
-  "risk": "low",
+  "risk": "med",
   "cause": "CalendarSyncService.getEventSummary/getEventDescription embed file number, name, reason and lawyer of the case, but ArchiveFileService.updateArchiveFile never calls calendarSync.eventUpdated for the open events (it only fires CaseUpdatedEvent, observed solely by CustomHooksService). Only the optional twice-daily full sync would refresh them",
   "maintainer": "",
-  "notes": "Fix: inject CalendarSyncServiceLocal and push open reviews when these fields changed (capture old values before edit). Change-detection helper unit-testable, end-to-end check needs a Nextcloud (Docker). Touches the same service as openspec add-bidirectional-nextcloud-calendar-sync, which does not cover this case",
+  "notes": "Fix: inject CalendarSyncServiceLocal into ArchiveFileService and push the open events only when file number, name, reason or lawyer changed (capture old values before the edit). Change detection is unit-testable, the end-to-end check needs a Nextcloud (Docker). Touches the service of the active openspec change add-bidirectional-nextcloud-calendar-sync, so coordinate with j-dimension first.",
   "user_visible": true,
-  "priority": 3,
+  "priority": 2,
   "confidence": "high"
  },
  {
@@ -1925,6 +2217,23 @@
   "user_visible": true,
   "priority": 0,
   "confidence": "med"
+ },
+ {
+  "number": 1337,
+  "title": "Programme fuer PDF/EB-Signatur sammeln",
+  "kind": "other",
+  "area": "other",
+  "category": "X",
+  "fixed_commit": "",
+  "files": [],
+  "effort": "L",
+  "risk": "high",
+  "cause": "Research task listing signing tools (jsignpdf, cloudfoxy, SecSigner, procilon) for future qualified signatures",
+  "maintainer": "Adds SecSigner as cross-platform option and links the local signing wish from #1611.",
+  "notes": "Not a bug, a large feature (local qeS signing incl. batch signing for beA), out of scope for small PRs.",
+  "user_visible": false,
+  "priority": 0,
+  "confidence": "high"
  },
  {
   "number": 1323,
@@ -2051,6 +2360,25 @@
   "confidence": "med"
  },
  {
+  "number": 1099,
+  "title": "ODS-Vorlage: mehrere Platzhalter in einer Zelle werden nicht ersetzt",
+  "kind": "bug",
+  "area": "documents",
+  "category": "R",
+  "fixed_commit": "",
+  "files": [
+   "j-lawyer-server/j-lawyer-server-ejb/src/main/java/com/jdimension/jlawyer/documents/LibreOfficeAccess.java"
+  ],
+  "effort": "M",
+  "risk": "med",
+  "cause": "Not located. The ODS branch of LibreOfficeAccess.setPlaceHolders (~l.2094) uses simple-odf TextNavigation/TextSelection on SpreadsheetDocument, unchanged since 2020 and simple-odf is still 0.8.2. Probably a stale selection index after an earlier replacement in the same cell paragraph (InvalidNavigationException only logged)",
+  "maintainer": "Opened by maintainer and attached a sample ODS (zip in the issue).",
+  "notes": "Sample is attached to the issue, so a unit test could reproduce it, but the cause still has to be found inside simple-odf first. Reporter: only with several placeholders in one cell, text box workaround works. 2021 issue, check whether it still happens.",
+  "user_visible": true,
+  "priority": 0,
+  "confidence": "low"
+ },
+ {
   "number": 1077,
   "title": "DSGVO Löschplan",
   "kind": "enhancement",
@@ -2169,6 +2497,25 @@
   "confidence": "high"
  },
  {
+  "number": 737,
+  "title": "DOCX-Vorlagen: Platzhaltersuche sehr langsam bei Textfeldern",
+  "kind": "bug",
+  "area": "documents",
+  "category": "F",
+  "fixed_commit": "",
+  "files": [
+   "j-lawyer-server/j-lawyer-server-ejb/src/main/java/com/jdimension/jlawyer/documents/MicrosoftOfficeAccess.java"
+  ],
+  "effort": "M",
+  "risk": "med",
+  "cause": "MicrosoftOfficeAccess.getPlaceHolders() loops over every known placeholder (all party types times fields) and for each one walks all paragraphs, running XmlCursor.selectPath(CURSOR_TEXTFIELD) and xmlText() per paragraph in findInTextfield(). The tfCache only caches the parsed CTR, the XPath still runs keys x paragraphs times",
+  "maintainer": "Reported upstream as Apache POI bug 64418 with sample code.",
+  "notes": "Perf fix in our code: collect paragraph and text box texts once, then match all keys (or one regex for {{...}}). Verifiable with a unit test comparing results before and after on a DOCX with text boxes. Maintainer wants perf work done with care, so keep it isolated to getPlaceHolders. The ODT getPlaceHolders has the same per-key pattern but no XPath.",
+  "user_visible": true,
+  "priority": 2,
+  "confidence": "med"
+ },
+ {
   "number": 663,
   "title": "beA: Reihenfolge aendern fuehrt zu Alias-Aenderung",
   "kind": "bug",
@@ -2186,6 +2533,26 @@
   "user_visible": true,
   "priority": 0,
   "confidence": "high"
+ },
+ {
+  "number": 583,
+  "title": "Tabellenformatierung: Linienfarbe bei Dokumenterstellung ignoriert",
+  "kind": "bug",
+  "area": "documents",
+  "category": "D",
+  "fixed_commit": "",
+  "files": [
+   "j-lawyer-server/j-lawyer-server-ejb/src/main/java/com/jdimension/jlawyer/documents/LibreOfficeAccess.java",
+   "j-lawyer-server-common/src/main/java/org/jlawyer/plugins/calculation/StyledCalculationTable.java"
+  ],
+  "effort": "M",
+  "risk": "low",
+  "cause": "HTML path fixed by 806ae44cd (2020). The ODT path (LibreOfficeAccess ~l.1693-1735) does set the colour via Border.setColor and Cell.setBorders, so the remaining problem seems to sit in simple-odf 0.8.2 (style sharing of appended columns or border serialisation). DOCX path sets the colour on the table borders",
+  "maintainer": "ODF Toolkit bug for LibreOffice documents, library update did not help, retry after #1472. Plugin author offered to drop the feature.",
+  "notes": "Low value, the plugin author suggested removing the option. A unit test with a generated 1x1 placeholder table could pinpoint it, but the cause is not in our code so far. Related to #3410 (same table class).",
+  "user_visible": true,
+  "priority": 0,
+  "confidence": "low"
  },
  {
   "number": 453,
@@ -2270,6 +2637,27 @@
   "notes": "Suggested PR: JDayChooser subclass that recolours holiday day buttons after drawDays() (verify protected API of jcalendar 1.3.2) with the holiday name as tooltip, per-year holiday cache in CalendarUtils (unit-testable), swap the three choosers in MultiCalDialog and its .form. Not endorsed by the maintainer yet and overlaps #2736 (absences in the same popup), so ask j-dimension whether holidays alone are welcome. Reporter wanted it at least optional.",
   "user_visible": true,
   "priority": 2,
+  "confidence": "med"
+ },
+ {
+  "number": 267,
+  "title": "Dokumente automatisch mit Aktenzeichen kennzeichnen",
+  "kind": "enhancement",
+  "area": "documents",
+  "category": "FIXED",
+  "fixed_commit": "5a1e96229",
+  "files": [
+   "j-lawyer-server/j-lawyer-server-ejb/src/main/java/com/jdimension/jlawyer/server/utils/FileNameGenerator.java",
+   "j-lawyer-client/src/main/java/com/jdimension/jlawyer/client/utils/NewFilenameOptionPanel.java",
+   "j-lawyer-client/src/main/java/com/jdimension/jlawyer/client/configuration/DocumentNameTemplatesSetupDialog.java"
+  ],
+  "effort": "S",
+  "risk": "low",
+  "cause": "Implemented by document name templates (#2246): 5a1e96229 file name generator plus config UI, 0ef584de5 and a54f66174 resolve placeholders such as {{AKTE_ZEICHEN}} in the name for added documents (NewFilenameOptionPanel), bulk save and template creation, names are sanitized (slash issue solved)",
+  "maintainer": "Slash could be a problem depending on OS, wish understood, implement like the existing naming rules.",
+  "notes": "openspec/specs/document-naming describes resolving case placeholders (file number) in name templates. Can be closed as implemented.",
+  "user_visible": true,
+  "priority": 0,
   "confidence": "med"
  },
  {
