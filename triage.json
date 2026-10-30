@@ -1,0 +1,418 @@
+[
+ {
+  "number": 3717,
+  "title": "Aktenablage: Option, grosse Dokumente zu loeschen",
+  "kind": "enhancement",
+  "area": "client-ui",
+  "category": "D",
+  "fixed_commit": "",
+  "files": [
+   "j-lawyer-client/src/main/java/com/jdimension/jlawyer/client/editors/files/ArchiveFilePanel.java",
+   "j-lawyer-client/src/main/java/com/jdimension/jlawyer/client/utils/CaseUtils.java"
+  ],
+  "effort": "M",
+  "risk": "med",
+  "cause": "No such feature. Archiving a case (chkArchived in ArchiveFilePanel) never looks at document sizes, a new suggestion dialog listing large images/videos/documents with delete actions would be needed.",
+  "maintainer": "Raw idea by j-dimension himself (2026-10-29), no details.",
+  "notes": "Thresholds, file types, recycle bin vs hard delete and when to show the dialog are all undecided. New dialog, not a small PR.",
+  "user_visible": true,
+  "priority": 0,
+  "confidence": "high"
+ },
+ {
+  "number": 3671,
+  "title": "Aktenanlage: Vorbelegung Sachbearbeiter / Anwalt konfigurierbar",
+  "kind": "enhancement",
+  "area": "client-ui",
+  "category": "D",
+  "fixed_commit": "",
+  "files": [
+   "j-lawyer-client/src/main/java/com/jdimension/jlawyer/client/editors/files/ArchiveFilePanel.java",
+   "j-lawyer-client/src/main/java/com/jdimension/jlawyer/client/configuration/UserAdministrationDialog.java",
+   "j-lawyer-client/src/main/java/com/jdimension/jlawyer/client/settings/UserSettings.java"
+  ],
+  "effort": "M",
+  "risk": "low",
+  "cause": "ArchiveFilePanel.clearInputs() hard-codes the presets for a new case: lawyer = current user (only if isLawyer()), assistant = current user. There is no configurable default like the per-user primaryGroup preset for group and authorized groups.",
+  "maintainer": "Should be configurable, analogous to the existing per-user preset of group and authorized groups.",
+  "notes": "Config location (user admin vs own profile) and storage (UserSettings key-value store, no schema change, vs new AppUserBean column) are not decided. Small once that is settled.",
+  "user_visible": true,
+  "priority": 0,
+  "confidence": "high"
+ },
+ {
+  "number": 3670,
+  "title": "Spalten Akten-/Adresssuche konfigurierbar (inkl. Eigene Felder)",
+  "kind": "enhancement",
+  "area": "client-ui",
+  "category": "X",
+  "fixed_commit": "",
+  "files": [
+   "j-lawyer-client/src/main/java/com/jdimension/jlawyer/client/editors/files/QuickArchiveFileSearchPanel.java",
+   "j-lawyer-client/src/main/java/com/jdimension/jlawyer/client/editors/files/QuickArchiveFileSearchTableModel.java",
+   "j-lawyer-client/src/main/java/com/jdimension/jlawyer/client/editors/addresses/QuickAddressSearchPanel.java",
+   "j-lawyer-client/src/main/java/com/jdimension/jlawyer/client/editors/addresses/QuickAddressSearchTableModel.java"
+  ],
+  "effort": "L",
+  "risk": "med",
+  "cause": "Both search panels build fixed colNames arrays (e.g. QuickArchiveFileSearchPanel line ~742) and fixed table models. The table model is shared with other panels (ArchiveFileReviewsMissingPanel). custom1-3 exist on ArchiveFileBean/AddressBean but are not shown.",
+  "maintainer": "",
+  "notes": "Column chooser + per-user persistence + custom fields in two search panels, modelled on the configurable document table from 5bbc007de. Large new UI feature, not one small PR.",
+  "user_visible": true,
+  "priority": 0,
+  "confidence": "high"
+ },
+ {
+  "number": 3480,
+  "title": "Dropscan: mehrere Scans als 1 PDF herunterladen",
+  "kind": "enhancement",
+  "area": "documents",
+  "category": "L",
+  "fixed_commit": "",
+  "files": [
+   "j-lawyer-client/src/main/java/com/jdimension/jlawyer/client/editors/documents/ScannerPanel.java",
+   "j-lawyer-client/src/main/java/com/jdimension/jlawyer/client/editors/files/DropscanEntryProcessor.java",
+   "j-lawyer-client/src/main/java/com/jdimension/jlawyer/client/voip/EpostPdfMergeStep.java"
+  ],
+  "effort": "M",
+  "risk": "med",
+  "cause": "The Dropscan tab in ScannerPanel imports one mailing at a time through DropscanEntryProcessor, there is no multi-select merge. PDFBox PDFMergerUtility is already used in EpostPdfMergeStep and ExportAsPdfMergeStep.",
+  "maintainer": "Merge on the client side (Dropscan web UI reportedly has such a function).",
+  "notes": "The merge itself is easy, but verifying needs a live Dropscan account and API downloads. Order of pages and destroy-after-import for the merged mailings also need a decision.",
+  "user_visible": true,
+  "priority": 0,
+  "confidence": "med"
+ },
+ {
+  "number": 3407,
+  "title": "Dateinamen beim Kopieren/Verschieben von Dokumenten beibehalten",
+  "kind": "enhancement",
+  "area": "client-ui",
+  "category": "F",
+  "fixed_commit": "",
+  "files": [
+   "j-lawyer-client/src/main/java/com/jdimension/jlawyer/client/editors/files/ArchiveFilePanel.java",
+   "j-lawyer-client/src/main/java/com/jdimension/jlawyer/client/utils/FileUtils.java",
+   "j-lawyer-client/src/main/java/com/jdimension/jlawyer/client/utils/NewFilenameOptionPanel.java"
+  ],
+  "effort": "S",
+  "risk": "low",
+  "cause": "ArchiveFilePanel.copyOrMoveDocumentsToOtherCase() calls FileUtils.getNewFileName() once per selected document with applyNameTemplate=move, so every document gets a dialog and a move also applies the name template. The server copyDocumentsToCase/moveDocumentsToCase already falls back to the source name when no new name is given.",
+  "maintainer": "",
+  "notes": "Client-only change in one method: for a multi-selection ask once whether to keep the existing names, skip the per-document dialog and template, and fall back to the dialog only on a name clash (doesDocumentExist), since addDocumentImpl throws on duplicates. UI pattern (one upfront question vs a 'fuer alle' option) should be confirmed with j-dimension. Not endorsed by the maintainer yet.",
+  "user_visible": true,
+  "priority": 3,
+  "confidence": "med"
+ },
+ {
+  "number": 3319,
+  "title": "Falldaten (FDB) optional durchsuchbar machen",
+  "kind": "enhancement",
+  "area": "server",
+  "category": "D",
+  "fixed_commit": "",
+  "files": [
+   "j-lawyer-server/j-lawyer-server-ejb/src/main/java/com/jdimension/jlawyer/services/ArchiveFileService.java",
+   "j-lawyer-server/j-lawyer-server-ejb/src/main/java/com/jdimension/jlawyer/services/FormsService.java",
+   "j-lawyer-server-entities/src/main/java/com/jdimension/jlawyer/persistence/ArchiveFileFormEntriesBean.java",
+   "j-lawyer-client/src/main/java/com/jdimension/jlawyer/client/editors/files/QuickArchiveFileSearchPanel.java"
+  ],
+  "effort": "M",
+  "risk": "med",
+  "cause": "ArchiveFileService.searchEnhanced() only matches name, fileNumber, filenumberext, reason, custom1-3, subjectField, lawyer, assistant and tags, form plugin data (case_forms entries) is not searched.",
+  "maintainer": "Implementation unclear, maybe a switch in the case search to include form data.",
+  "notes": "Maintainer explicitly says the implementation is unclear (switch in search UI, SQL join vs Lucene index). Performance of joining form entries also needs care.",
+  "user_visible": true,
+  "priority": 0,
+  "confidence": "high"
+ },
+ {
+  "number": 3258,
+  "title": "Text einer Notiz in Dokument uebernehmen (wie Sprachmemo)",
+  "kind": "enhancement",
+  "area": "documents",
+  "category": "F",
+  "fixed_commit": "",
+  "files": [
+   "j-lawyer-client/src/main/java/com/jdimension/jlawyer/client/editors/documents/viewer/HtmlPanel.java",
+   "j-lawyer-client/src/main/java/com/jdimension/jlawyer/client/editors/documents/viewer/HtmlPanel.form",
+   "j-lawyer-client/src/main/java/com/jdimension/jlawyer/client/editors/documents/viewer/DocumentViewerFactory.java",
+   "j-lawyer-client/src/main/java/com/jdimension/jlawyer/client/editors/documents/viewer/SoundplayerPanel.java"
+  ],
+  "effort": "M",
+  "risk": "low",
+  "cause": "The note viewer HtmlPanel (created in DocumentViewerFactory for .html) has no 'neues Dokument' action and gets no DocumentPreviewSaveCallback, unlike SoundplayerPanel.cmdNewDocumentActionPerformed(), which passes the transcript as ingoText to EditArchiveFileDetailsPanel.newDocumentDialog() for {{INGO_TEXT}}.",
+  "maintainer": "Issue written by j-dimension: transfer note text without the header into documents, like the voice memo function.",
+  "notes": "Behaviour defined by analogy with the existing voice memo button. Header = the table + <hr/> that AddNoteFrame prepends, so strip up to the first <hr> and convert HTML to plain text with paragraph breaks (Jsoup), which is a unit-testable helper. LibreOfficeAccess already handles multi-paragraph INGO_TEXT. Needs the .form update. iradraconis' context-menu/Ingo idea overlaps #2934 and should stay out of scope.",
+  "user_visible": true,
+  "priority": 3,
+  "confidence": "med"
+ },
+ {
+  "number": 3215,
+  "title": "Etikett ueber Desktop direkt entfernen koennen",
+  "kind": "enhancement",
+  "area": "client-ui",
+  "category": "D",
+  "fixed_commit": "",
+  "files": [
+   "j-lawyer-client/src/main/java/com/jdimension/jlawyer/client/desktop/TaggedEntryPanelTransparent.java",
+   "j-lawyer-client/src/main/java/com/jdimension/jlawyer/client/desktop/TaggedEntryPanelTransparent.form",
+   "j-lawyer-client/src/main/java/com/jdimension/jlawyer/client/desktop/TaggedTimerTask.java",
+   "j-lawyer-client/src/main/java/com/jdimension/jlawyer/client/desktop/TaggedEntry.java"
+  ],
+  "effort": "M",
+  "risk": "low",
+  "cause": "Desktop tagged entries (TaggedEntryPanelTransparent) only open the case on click, there is no context menu or action to remove a tag.",
+  "maintainer": "Issue by j-dimension with empty body.",
+  "notes": "UI undecided: an entry can show several matching tags, case tags vs document tags (TaggedEntry.documentId), multi-value tags, confirmation and refresh of the Tagged panel. Would be close to F once a 'context menu per shown tag' design is agreed, Swing only and not headless-testable.",
+  "user_visible": true,
+  "priority": 0,
+  "confidence": "med"
+ },
+ {
+  "number": 3158,
+  "title": "Wiedervorlagen kategorisieren",
+  "kind": "enhancement",
+  "area": "calendar",
+  "category": "X",
+  "fixed_commit": "",
+  "files": [
+   "j-lawyer-server-entities/src/main/java/com/jdimension/jlawyer/persistence/ArchiveFileReviewsBean.java",
+   "j-lawyer-client/src/main/java/com/jdimension/jlawyer/client/editors/files/NewEventPanel.java"
+  ],
+  "effort": "L",
+  "risk": "med",
+  "cause": "ArchiveFileReviewsBean has eventType, summary, assignee, calendarSetup and reminder fields but no category.",
+  "maintainer": "",
+  "notes": "Needs a new column (schema change) or a product decision to reuse calendar entry templates or tags as categories, plus a batch-processing view for one category.",
+  "user_visible": true,
+  "priority": 0,
+  "confidence": "high"
+ },
+ {
+  "number": 3148,
+  "title": "Handhabung von Dateien > 2GB",
+  "kind": "enhancement",
+  "area": "server",
+  "category": "X",
+  "fixed_commit": "",
+  "files": [
+   "j-lawyer-server-common/src/main/java/com/jdimension/jlawyer/server/utils/ServerFileUtils.java",
+   "j-lawyer-server/j-lawyer-server-ejb/src/main/java/com/jdimension/jlawyer/services/ArchiveFileService.java"
+  ],
+  "effort": "L",
+  "risk": "high",
+  "cause": "Document content is passed around as byte[] (ServerFileUtils.readFile, getDocumentContent, addDocument), limited to Integer.MAX_VALUE. Only the DataBucket path (getDocumentContentBucket) streams in chunks.",
+  "maintainer": "Issue by j-dimension: a solution without the byte-array limit has to be designed.",
+  "notes": "Architectural change across EJB API, client and storage. Related to openspec change add-document-encryption-at-rest (C5 DataBucket streaming path, explicitly notes the 2 GB cap).",
+  "user_visible": true,
+  "priority": 0,
+  "confidence": "high"
+ },
+ {
+  "number": 3146,
+  "title": "Standardordner fuer Notizen",
+  "kind": "enhancement",
+  "area": "client-ui",
+  "category": "D",
+  "fixed_commit": "",
+  "files": [
+   "j-lawyer-client/src/main/java/com/jdimension/jlawyer/client/editors/files/AddNoteFrame.java",
+   "j-lawyer-client/src/main/java/com/jdimension/jlawyer/client/settings/UserSettings.java"
+  ],
+  "effort": "M",
+  "risk": "low",
+  "cause": "AddNoteFrame.cmdAddDocumentActionPerformed() calls addDocument(caseId, name, bytes, \"\", null) without any folder, so new notes always land in the case root folder. No default-folder setting exists anywhere.",
+  "maintainer": "Issue by j-dimension: per-user or global setting for the folder of new notes.",
+  "notes": "User vs global setting, folder resolution by name in each case tree and behaviour when the folder is missing (create or root) are undecided.",
+  "user_visible": true,
+  "priority": 0,
+  "confidence": "high"
+ },
+ {
+  "number": 3101,
+  "title": "Erweiterte Sprecherbenennung bei Transkription",
+  "kind": "enhancement",
+  "area": "other",
+  "category": "D",
+  "fixed_commit": "",
+  "files": [
+   "j-lawyer-client/src/main/java/com/jdimension/jlawyer/client/editors/documents/viewer/SoundplayerPanel.java"
+  ],
+  "effort": "M",
+  "risk": "low",
+  "cause": "SoundplayerPanel.processOutput() puts the transcript from the external Ingo backend verbatim into taTranscription, speaker labels like 'SPRECHER 1' are produced there and the client offers no rename or search/replace.",
+  "maintainer": "",
+  "notes": "Two variants proposed (suggest names from case parties vs simple search/replace). The label format is defined by the external Ingo service. A small 'Sprecher umbenennen' dialog would be feasible once a variant is chosen.",
+  "user_visible": true,
+  "priority": 0,
+  "confidence": "med"
+ },
+ {
+  "number": 2999,
+  "title": "Multiwindow fuer Sprachmemo-Funktion",
+  "kind": "enhancement",
+  "area": "client-ui",
+  "category": "D",
+  "fixed_commit": "",
+  "files": [
+   "j-lawyer-client/src/main/java/com/jdimension/jlawyer/client/editors/files/AddVoiceMemoDialog.java",
+   "j-lawyer-client/src/main/java/com/jdimension/jlawyer/client/editors/files/ArchiveFilePanel.java",
+   "j-lawyer-client/src/main/java/com/jdimension/jlawyer/client/editors/documents/viewer/SoundplayerPanel.java",
+   "j-lawyer-client/src/main/java/com/jdimension/jlawyer/client/editors/files/AddNoteFrame.java"
+  ],
+  "effort": "M",
+  "risk": "med",
+  "cause": "AddVoiceMemoDialog is a modal JDialog (modal=true in ArchiveFilePanel.cmdAddVoiceMemoActionPerformed and SoundplayerPanel continue-recording), the caller reads getMemoBytes() synchronously after setVisible(), which blocks the case window while recording.",
+  "maintainer": "",
+  "notes": "Follow-up of #2940, where notes became the non-modal AddNoteFrame registered via EditorsRegistry.registerFrame. Same refactor needed here (dialog saves to the captured case itself). Open points: switching or closing the case while recording, the continue-recording path. M-sized Swing refactor, not headless-verifiable, so not F.",
+  "user_visible": true,
+  "priority": 0,
+  "confidence": "med"
+ },
+ {
+  "number": 2998,
+  "title": "Messenger: Nachrichtenpriorisierung",
+  "kind": "enhancement",
+  "area": "other",
+  "category": "X",
+  "fixed_commit": "",
+  "files": [
+   "j-lawyer-server-entities/src/main/java/com/jdimension/jlawyer/persistence/InstantMessage.java",
+   "j-lawyer-client/src/main/java/com/jdimension/jlawyer/client/messenger/MessageSendPanel.java",
+   "j-lawyer-client/src/main/java/com/jdimension/jlawyer/client/messenger/MessagingCenterPanel.java"
+  ],
+  "effort": "L",
+  "risk": "med",
+  "cause": "InstantMessage has no priority field (only sent, sender, content, case and document context, mentions).",
+  "maintainer": "",
+  "notes": "Needs a new DB column plus UI for selection, highlighting, filter and a separate tab.",
+  "user_visible": true,
+  "priority": 0,
+  "confidence": "high"
+ },
+ {
+  "number": 2990,
+  "title": "Termin in mehrere Kalender eintragen",
+  "kind": "enhancement",
+  "area": "calendar",
+  "category": "D",
+  "fixed_commit": "",
+  "files": [
+   "j-lawyer-client/src/main/java/com/jdimension/jlawyer/client/editors/files/NewEventPanel.java",
+   "j-lawyer-client/src/main/java/com/jdimension/jlawyer/client/editors/files/EditOrDuplicateEventDialog.java",
+   "j-lawyer-server-entities/src/main/java/com/jdimension/jlawyer/persistence/ArchiveFileReviewsBean.java"
+  ],
+  "effort": "M",
+  "risk": "med",
+  "cause": "ArchiveFileReviewsBean references exactly one CalendarSetup and the event dialogs offer a single calendar selection.",
+  "maintainer": "",
+  "notes": "Could be done client-side by creating one independent event per selected calendar, but linked vs independent copies, later edit/delete and cloud sync need a decision. Touches the area of openspec change add-bidirectional-nextcloud-calendar-sync.",
+  "user_visible": true,
+  "priority": 0,
+  "confidence": "med"
+ },
+ {
+  "number": 2988,
+  "title": "Schlagworte / Notiz an Dokument (Rest: Kategorie/Dokumentart)",
+  "kind": "enhancement",
+  "area": "documents",
+  "category": "D",
+  "fixed_commit": "",
+  "files": [
+   "j-lawyer-server-entities/src/main/java/com/jdimension/jlawyer/persistence/ArchiveFileDocumentsBean.java",
+   "j-lawyer-client/src/main/java/com/jdimension/jlawyer/client/editors/files/ArchiveFilePanel.java"
+  ],
+  "effort": "M",
+  "risk": "low",
+  "cause": "All checklist items except 'Kategorie / Dokumentart' were delivered by 5bbc007de (title, keywords, received date, correspondent, parent hierarchy, list display, keyword suggestions). A category maintained in settings can already be modelled as a document multi-value tag (document.tags.mv.Dokumentart, multi-value tags since 225cd99c6).",
+  "maintainer": "j-dimension updated the checklist on 2026-09-29 and left only the category item open.",
+  "notes": "Mostly done. Remaining item needs a decision: close it in favour of document multi-value tags, or add a dedicated category field (schema change, X).",
+  "user_visible": true,
+  "priority": 0,
+  "confidence": "med"
+ },
+ {
+  "number": 2986,
+  "title": "Messaging: Nachricht mit Referenzen auf mehrere Dokumente",
+  "kind": "enhancement",
+  "area": "other",
+  "category": "X",
+  "fixed_commit": "",
+  "files": [
+   "j-lawyer-server-entities/src/main/java/com/jdimension/jlawyer/persistence/InstantMessage.java",
+   "j-lawyer-client/src/main/java/com/jdimension/jlawyer/client/messenger/SendInstantMessageDialog.java",
+   "j-lawyer-client/src/main/java/com/jdimension/jlawyer/client/messenger/MessageSendPanel.java"
+  ],
+  "effort": "L",
+  "risk": "med",
+  "cause": "InstantMessage.documentContext is a single @ManyToOne on column document_id.",
+  "maintainer": "",
+  "notes": "Needs a new join table (Flyway migration), API changes and messenger UI changes.",
+  "user_visible": true,
+  "priority": 0,
+  "confidence": "high"
+ },
+ {
+  "number": 2934,
+  "title": "Weitere Ingo-Funktionen bei Notizen",
+  "kind": "enhancement",
+  "area": "other",
+  "category": "D",
+  "fixed_commit": "",
+  "files": [
+   "j-lawyer-client/src/main/java/com/jdimension/jlawyer/client/editors/files/AddNoteFrame.java",
+   "j-lawyer-client/src/main/java/com/jdimension/jlawyer/client/editors/documents/viewer/HtmlPanel.java",
+   "j-lawyer-client/src/main/java/com/jdimension/jlawyer/client/mail/SendEmailFrame.java"
+  ],
+  "effort": "M",
+  "risk": "low",
+  "cause": "AddNoteFrame and HtmlPanel only use Ingo transcription (REQUESTTYPE_TRANSCRIBE), while SendEmailFrame builds popAssistant via AssistantAccess.populateMenu for GENERATE, EXPLAIN, SUMMARIZE, TRANSLATE and CHAT.",
+  "maintainer": "",
+  "notes": "Mirroring the e-mail Ingo menu in the note editor (button, AssistantInputAdapter, result insertion) is feasible but M-sized with .form changes. The concrete prompts (Antworten, Briefkopf, DeepL) are server-side Ingo configuration. Scope and placement undecided. Overlaps the context-menu idea in #3258.",
+  "user_visible": true,
+  "priority": 0,
+  "confidence": "med"
+ },
+ {
+  "number": 2933,
+  "title": "Ingo-Transkription auch fuer AAC und Opus",
+  "kind": "enhancement",
+  "area": "other",
+  "category": "X",
+  "fixed_commit": "",
+  "files": [
+   "j-lawyer-client/src/main/java/com/jdimension/jlawyer/client/utils/AudioConvertUtils.java",
+   "j-lawyer-client/src/main/java/com/jdimension/jlawyer/client/editors/documents/viewer/SoundplayerPanel.java"
+  ],
+  "effort": "L",
+  "risk": "med",
+  "cause": "The client decodes only MP3 and OGG Vorbis to WAV via javax.sound SPIs (AudioConvertUtils, PR #3624 merged as 679ca2fe9). AAC was dropped because the JAAD forks hijack all AudioSystem calls, Opus has no Java Sound provider at all.",
+  "maintainer": "Prefers server-side conversion with ffmpeg on the WildFly host (precedent LibreOffice), alternative codec-only client libs called per file extension. Keeps the ticket open for AAC/Opus.",
+  "notes": "New server-side system dependency or substantial own codec code, needs ffmpeg in the test environment. Not a small PR.",
+  "user_visible": true,
+  "priority": 0,
+  "confidence": "high"
+ },
+ {
+  "number": 2853,
+  "title": "Akte loeschen nur nach Passworteingabe / geschuetzte Akten",
+  "kind": "enhancement",
+  "area": "client-ui",
+  "category": "D",
+  "fixed_commit": "",
+  "files": [
+   "j-lawyer-client/src/main/java/com/jdimension/jlawyer/client/editors/files/QuickArchiveFileSearchPanel.java",
+   "j-lawyer-server/j-lawyer-server-ejb/src/main/java/com/jdimension/jlawyer/services/ArchiveFileService.java"
+  ],
+  "effort": "M",
+  "risk": "med",
+  "cause": "Case deletion (QuickArchiveFileSearchPanel -> ArchiveFileService.removeArchiveFile) only needs removeArchiveFileRole, group access and a yes/no confirmation dialog.",
+  "maintainer": "Issue by j-dimension, optional idea: mark cases as protected and prevent deletion.",
+  "notes": "Password re-entry vs protected flag is a product decision. A protected flag needs a new column (X). Password re-check must be enforced server-side to be meaningful.",
+  "user_visible": true,
+  "priority": 0,
+  "confidence": "high"
+ }
+]
