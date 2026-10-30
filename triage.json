@@ -85,6 +85,91 @@
   "confidence": "high"
  },
  {
+  "number": 3649,
+  "title": "Outlook drag and drop fails, .msg preview without line breaks",
+  "kind": "bug",
+  "area": "e-mail",
+  "category": "L",
+  "fixed_commit": "",
+  "files": [
+   "j-lawyer-client/src/main/java/com/jdimension/jlawyer/client/editors/files/OutlookDropHelper.java",
+   "j-lawyer-client/src/main/java/com/jdimension/jlawyer/client/editors/files/FileDropSupport.java",
+   "j-lawyer-client/src/main/java/com/jdimension/jlawyer/client/mail/MailContentUI.java",
+   "j-lawyer-client/src/main/java/com/jdimension/jlawyer/client/editors/documents/viewer/DocumentViewerFactory.java"
+  ],
+  "effort": "M",
+  "risk": "med",
+  "cause": "DnD goes through FileDropSupport/OutlookDropHelper (FileGroupDescriptorW + FileContents, added in df9169351) and cannot be checked without Windows + Outlook. For the .msg preview, MailContentUI.setOutlookMessageImpl decides HTML vs text with a crude heuristic (body contains <html, /> or <p). A possible cause: a plain-text body that contains something like <peter@...> is rendered as HTML and loses all line breaks",
+  "maintainer": "Sees two topics (DnD and rendering) and asked for a sample .msg (privately) to reproduce the rendering problem.",
+  "notes": "L for the Outlook DnD part (Windows/Outlook only). The .msg rendering part stays R until a sample arrives. The reporter did not say which drop target fails.",
+  "user_visible": true,
+  "priority": 0,
+  "confidence": "med"
+ },
+ {
+  "number": 3610,
+  "title": "Mail window drops behind main window after 'als PDF senden'",
+  "kind": "bug",
+  "area": "e-mail",
+  "category": "L",
+  "fixed_commit": "",
+  "files": [
+   "j-lawyer-client/src/main/java/com/jdimension/jlawyer/client/editors/files/SendPDFAction.java",
+   "j-lawyer-client/src/main/java/com/jdimension/jlawyer/client/processing/ProgressableAction.java",
+   "j-lawyer-client/src/main/java/com/jdimension/jlawyer/client/editors/files/ArchiveFilePanel.java"
+  ],
+  "effort": "S",
+  "risk": "low",
+  "cause": "SendPDFAction.execute() shows the SendEmailFrame via invokeLater while the modal ProgressIndicator (owner = main window) is still open. ProgressableAction.start() then disposes the indicator, Windows re-activates its owner (the main window), and the toFront()/requestFocus() on the frame in the same EDT event does not win. Candidate fix: show the frame only after the indicator is disposed (callback) or defer toFront with a second invokeLater",
+  "maintainer": "",
+  "notes": "Windows-only focus behaviour (does not happen on the second screen), needs a Windows machine to verify. Same handler as #1205 (mnuSendDocumentPDFActionPerformed), keep the two PRs separate.",
+  "user_visible": true,
+  "priority": 0,
+  "confidence": "med"
+ },
+ {
+  "number": 3586,
+  "title": "Move e-mails between mailboxes",
+  "kind": "enhancement",
+  "area": "e-mail",
+  "category": "D",
+  "fixed_commit": "",
+  "files": [
+   "j-lawyer-client/src/main/java/com/jdimension/jlawyer/client/mail/EmailInboxPanel.java",
+   "j-lawyer-server/j-lawyer-server-ejb/src/main/java/com/jdimension/jlawyer/services/EmailService.java",
+   "j-lawyer-server-api/src/main/java/com/jdimension/jlawyer/services/EmailServiceRemote.java"
+  ],
+  "effort": "L",
+  "risk": "med",
+  "cause": "Feature. The folder drop handler in EmailInboxPanel explicitly blocks cross-mailbox moves ('Nachrichten können nicht zwischen verschiedenen Postfächern verschoben werden'), and EmailService.moveMessage only works within one mailbox",
+  "maintainer": "Maintainer-created customer ticket with an empty body.",
+  "notes": "Needs a new server operation (fetch the raw MIME, append it to the target mailbox, delete the source) across the IMAP and Graph backends, plus a remote-interface change. There is no spec.",
+  "user_visible": true,
+  "priority": 0,
+  "confidence": "high"
+ },
+ {
+  "number": 3536,
+  "title": "EmailUtils.buildEmlBytes drops inline metadata (no multipart/related)",
+  "kind": "bug",
+  "area": "e-mail",
+  "category": "F",
+  "fixed_commit": "",
+  "files": [
+   "j-lawyer-client/src/main/java/com/jdimension/jlawyer/client/mail/EmailUtils.java",
+   "j-lawyer-server/j-lawyer-server-ejb/src/main/java/com/jdimension/jlawyer/services/EmailService.java",
+   "j-lawyer-server/j-lawyer-server-ejb/src/test/java/com/jdimension/jlawyer/services/EmailMimeStructureTest.java"
+  ],
+  "effort": "M",
+  "risk": "low",
+  "cause": "EmailUtils.buildEmlBytes builds a flat multipart/mixed and ignores MailAttachmentDTO.isInline/contentId (no multipart/related, no Content-ID, no inline disposition), unlike EmailService.buildMimeMultipart",
+  "maintainer": "Maintainer-authored follow-up to #3512/#3513. Proposes porting buildMimeMultipart to shared code, or an equivalent implementation in EmailUtils.",
+  "notes": "No visible bug today because desktop attachments are never inline. The shared builder cannot go into j-lawyer-server-common because MailAttachmentDTO lives in j-lawyer-server-api, which depends on common. Put it in server-api or mirror it in EmailUtils. EmailMimeStructureTest can serve as the test template.",
+  "user_visible": false,
+  "priority": 2,
+  "confidence": "high"
+ },
+ {
   "number": 3499,
   "title": "Windows 11: invisible dialogs pile up behind the main window",
   "kind": "bug",
@@ -102,6 +187,45 @@
   "notes": "No repro steps, Windows 11 specific window ordering. Reporter later says they are dialogs that accumulate during the day. Possible relation to #3345",
   "user_visible": true,
   "priority": 0,
+  "confidence": "med"
+ },
+ {
+  "number": 3489,
+  "title": "Neue UI: Finanzuebersicht in der Akte",
+  "kind": "enhancement",
+  "area": "finance",
+  "category": "X",
+  "fixed_commit": "",
+  "files": [
+   "j-lawyer-web/frontend/src/app/akten/invoice-editor.component.ts"
+  ],
+  "effort": "M",
+  "risk": "low",
+  "cause": "Feature request (case-level totals of invoiced, paid and open amounts), no bug.",
+  "maintainer": "Authored by j-dimension, label customer.",
+  "notes": "'neue UI' refers to the web client (issue created the same day as de25aa6c1 feat(web) editable invoices), so off limits. The Swing client already shows paid/open per invoice in the Belege list.",
+  "user_visible": true,
+  "priority": 0,
+  "confidence": "med"
+ },
+ {
+  "number": 3488,
+  "title": "Desktop 'offene Rechnungen': Teilzahlungen beruecksichtigen",
+  "kind": "enhancement",
+  "area": "finance",
+  "category": "F",
+  "fixed_commit": "",
+  "files": [
+   "j-lawyer-server/j-lawyer-server-ejb/src/main/java/com/jdimension/jlawyer/persistence/InvoiceFacade.java",
+   "j-lawyer-client/src/main/java/com/jdimension/jlawyer/client/desktop/InvoicesOpenTimerTask.java"
+  ],
+  "effort": "S",
+  "risk": "low",
+  "cause": "InvoiceFacade.findSummaryByStatus (behind the Swing desktop invoices summary added in 1ccb5c386, #3352) sums only a.totalGross of open invoices, account entries linked to these invoices (CaseAccountEntry.invoice, earnings minus spendings) are not subtracted.",
+  "maintainer": "Task created by j-dimension, no further specification.",
+  "notes": "Add per bucket a JPQL sum over CaseAccountEntry e with the same status, turnOver and dueDate conditions on e.invoice and subtract it from the total. Ambiguity: 'Desktop' might also mean the web desktop widget (j-lawyer-web sums totalGross client side, off limits). Also totalGross includes VAT for smallBusiness=false invoices (server ignores the flag), consider total for those.",
+  "user_visible": true,
+  "priority": 2,
   "confidence": "med"
  },
  {
@@ -147,6 +271,26 @@
   "confidence": "high"
  },
  {
+  "number": 3415,
+  "title": "LibreOffice paste formatting (line-height) not removable in mail edit",
+  "kind": "bug",
+  "area": "e-mail",
+  "category": "D",
+  "fixed_commit": "",
+  "files": [
+   "j-lawyer-client/src/main/resources/resources/suneditor/suneditor-template.html",
+   "j-lawyer-client/src/main/java/com/jdimension/jlawyer/client/editors/webview/WebViewHtmlEditorPanel.java"
+  ],
+  "effort": "S",
+  "risk": "med",
+  "cause": "The custom paste handler in suneditor-template.html (handlePaste/cleanPastedHTML) deliberately keeps style attributes (attributesWhitelist all: style), so <p style=line-height/margin-bottom> from LibreOffice survives. SunEditor's removeFormat only strips inline formatting, not block-level styles",
+  "maintainer": "Said the editor is an external library with little room for customization. The template's own custom paste handler does give room, though.",
+  "notes": "Labelled duplicate (of #3255 per librelegal). A paste-as-plain-text mode (Ctrl+Shift+V flag in handlePaste) or stripping line-height/margin from pasted blocks is a small JS change in the template, but it is a product decision and can only be verified in the WebView GUI.",
+  "user_visible": true,
+  "priority": 0,
+  "confidence": "med"
+ },
+ {
   "number": 3407,
   "title": "Dateinamen beim Kopieren/Verschieben von Dokumenten beibehalten",
   "kind": "enhancement",
@@ -165,6 +309,47 @@
   "notes": "Client-only change in one method: for a multi-selection ask once whether to keep the existing names, skip the per-document dialog and template, and fall back to the dialog only on a name clash (doesDocumentExist), since addDocumentImpl throws on duplicates. UI pattern (one upfront question vs a 'fuer alle' option) should be confirmed with j-dimension. Not endorsed by the maintainer yet.",
   "user_visible": true,
   "priority": 3,
+  "confidence": "med"
+ },
+ {
+  "number": 3402,
+  "title": "Gap between mail text and signature is a <p> (Absatz) line, not a div",
+  "kind": "bug",
+  "area": "e-mail",
+  "category": "F",
+  "fixed_commit": "",
+  "files": [
+   "j-lawyer-client/src/main/java/com/jdimension/jlawyer/client/mail/SendEmailFrame.java"
+  ],
+  "effort": "S",
+  "risk": "low",
+  "cause": "SendEmailFrame.cmbTemplatesActionPerformed joins template and signature with a bare \"<br/>\" (new mail: t + \"<br/>\" + signature, and both HTML reply branches). SunEditor's convertContentsForEditor wraps every top-level non-format node into its defaultTag 'p', so the separator becomes <p><br></p> with the 10px paragraph margin (.sun-editor-editable p in suneditor.min.css)",
+  "maintainer": "No comment here. The predecessor #3263 was closed by 0a2e62097, which reduced the gap to one <br/>.",
+  "notes": "Fix: use \"<div><br></div>\" (or drop the separator) in the three HTML branches. The reporter accepts either variant, and the div line stays closest to #3263. Related to #3253 (same reporter, same method). Extracting the HTML composition into a small static helper would make it unit-testable.",
+  "user_visible": true,
+  "priority": 4,
+  "confidence": "high"
+ },
+ {
+  "number": 3401,
+  "title": "Inbox table: attachment indicator column",
+  "kind": "enhancement",
+  "area": "e-mail",
+  "category": "F",
+  "fixed_commit": "",
+  "files": [
+   "j-lawyer-server/j-lawyer-server-ejb/src/main/java/com/jdimension/jlawyer/services/EmailService.java",
+   "j-lawyer-client/src/main/java/com/jdimension/jlawyer/client/mail/EmailInboxPanel.java",
+   "j-lawyer-client/src/main/java/com/jdimension/jlawyer/client/mail/EmailTableCellRenderer.java",
+   "j-lawyer-server-api/src/main/java/com/jdimension/jlawyer/services/MailMessageDTO.java"
+  ],
+  "effort": "M",
+  "risk": "med",
+  "cause": "Feature. The IMAP listMessages in EmailService skips hasAttachments ('too expensive', near line 2056), hasAttachments(Part) only checks the top multipart level, and EmailInboxPanel.tblMails has no attachment column. MS Graph already fills hasAttachments",
+  "maintainer": "Posted a detailed plan (2026-09-24): add FetchProfile.Item.CONTENT_INFO to the existing batch FETCH, make hasAttachments recursive (ignore p7s), then add a narrow paperclip column in EmailInboxPanel. No extra remote calls.",
+  "notes": "Endorsed and fully specified, but it spans two layers, changes the IMAP fetch profile (perf, handle with care) and needs a .form edit. Customer ticket, so ask first whether the maintainer is already implementing it. The server part alone is unit-testable.",
+  "user_visible": true,
+  "priority": 2,
   "confidence": "med"
  },
  {
@@ -252,6 +437,26 @@
   "confidence": "med"
  },
  {
+  "number": 3371,
+  "title": "Belegdialog: erneutes Bestaetigen von Typ/Nummernkreis verwirft Eingaben",
+  "kind": "bug",
+  "area": "finance",
+  "category": "F",
+  "fixed_commit": "",
+  "files": [
+   "j-lawyer-client/src/main/java/com/jdimension/jlawyer/client/editors/files/InvoiceDialog.java",
+   "j-lawyer-server/j-lawyer-server-ejb/src/main/java/com/jdimension/jlawyer/services/ArchiveFileService.java"
+  ],
+  "effort": "S",
+  "risk": "low",
+  "cause": "InvoiceDialog.cmdConfirmInvoiceNumberActionPerformed (update branch, currentEntry != null) only calls fillCurrentEntry() locally, then ArchiveFileService.updateInvoiceType() persists just type/pool/number and the client calls setEntry(updatedInvoice), which reloads the DB state. Unsaved status (back to Entwurf), recipient (recipientAddress reset to the stored null contact), sender, texts and unsaved position edits are lost.",
+  "maintainer": "",
+  "notes": "Fix: persist the dialog state before the type change (call save() instead of fillCurrentEntry() in the update branch, it already writes positions and header) or re-apply the unsaved fields to updatedInvoice before setEntry. Only the first confirmation works because recipient and status can only be set after the invoice exists. Same reporter and same method as #2169 (the 'wie bisher' reference), keep as separate PR and do this one first.",
+  "user_visible": true,
+  "priority": 4,
+  "confidence": "high"
+ },
+ {
   "number": 3363,
   "title": "beAstie: Fehlermeldung beim Verschieben in den Papierkorb",
   "kind": "bug",
@@ -270,6 +475,26 @@
   "user_visible": true,
   "priority": 3,
   "confidence": "med"
+ },
+ {
+  "number": 3359,
+  "title": "Ingo agent: compose and send e-mail",
+  "kind": "enhancement",
+  "area": "e-mail",
+  "category": "X",
+  "fixed_commit": "",
+  "files": [
+   "j-lawyer-client/src/main/java/com/jdimension/jlawyer/client/assistant/ToolRegistry.java",
+   "j-lawyer-client/src/main/java/com/jdimension/jlawyer/client/mail/SendEmailFrame.java"
+  ],
+  "effort": "L",
+  "risk": "high",
+  "cause": "Feature. Ingo (AI assistant) has no mail tool",
+  "maintainer": "",
+  "notes": "A large AI feature in the Ingo tool-calling area (see openspec/changes/add-ingo-tool-calling). Sending mail on the user's behalf needs product design.",
+  "user_visible": true,
+  "priority": 0,
+  "confidence": "high"
  },
  {
   "number": 3321,
@@ -336,6 +561,26 @@
   "confidence": "med"
  },
  {
+  "number": 3253,
+  "title": "Reply with 'normal (div)' template shows paragraph spacing",
+  "kind": "bug",
+  "area": "e-mail",
+  "category": "FIXED",
+  "fixed_commit": "0958c866a",
+  "files": [
+   "j-lawyer-client/src/main/java/com/jdimension/jlawyer/client/mail/SendEmailFrame.java",
+   "j-lawyer-client/src/main/java/com/jdimension/jlawyer/client/mail/EmailUtils.java"
+  ],
+  "effort": "S",
+  "risk": "low",
+  "cause": "In the reply/forward branch of cmbTemplatesActionPerformed the template was prepended to a Jsoup document and serialized with doc.html() using Jsoup's default pretty printing. SunEditor turned the newlines/indentation between the template's <div> blocks into empty <p> </p> paragraphs (htmlCompress keeps one space, which gets wrapped in defaultTag p), so it looked like 'Absatz' spacing",
+  "maintainer": "",
+  "notes": "0958c866a (2026-06-09, 'no pretty printing because it adds unwanted empty paragraphs') sets prettyPrint(false) in exactly these reply branches and in the EmailUtils reply quoting. Not in a release tag yet (latest tag 3.5.0.16 predates it). The remaining one-line <p> gap before the signature is #3402.",
+  "user_visible": true,
+  "priority": 0,
+  "confidence": "med"
+ },
+ {
   "number": 3230,
   "title": "Aktenvorschlag anhand Aktenzeichen auch bei eEB-Abgabe",
   "kind": "bug",
@@ -354,6 +599,25 @@
   "user_visible": true,
   "priority": 4,
   "confidence": "med"
+ },
+ {
+  "number": 3228,
+  "title": "RVG-Plugin: Faktor teils in Spalte Menge, teils nur im Positionstext",
+  "kind": "bug",
+  "area": "finance",
+  "category": "X",
+  "fixed_commit": "",
+  "files": [
+   "j-lawyer-client/src/main/java/com/jdimension/jlawyer/client/plugins/calculation/CalculationPlugin.java"
+  ],
+  "effort": "S",
+  "risk": "low",
+  "cause": "Units vs. factor-in-text are decided inside the RVG Groovy plugin (rvg_ui.groovy in the separate j-lawyer-calculations repository, loaded at runtime via CalculationPlugin.getUi). The client only displays the InvoicePosition units it receives.",
+  "maintainer": "",
+  "notes": "Not fixable in this repo, belongs to j-lawyer-calculations (see openspec/specs/calculation-plugins). The 3.6.0.0 plugin republication (880d0ac13, archived change fix-calculation-plugin-rounding) reworked the BigDecimal math but does not mention units/factor consistency. The wish for adjustable table columns relates to the archived change update-invoice-table-flexible-columns.",
+  "user_visible": true,
+  "priority": 0,
+  "confidence": "high"
  },
  {
   "number": 3215,
@@ -378,6 +642,48 @@
   "confidence": "med"
  },
  {
+  "number": 3200,
+  "title": "HTML editor: content at start/end outside scrollable area",
+  "kind": "bug",
+  "area": "e-mail",
+  "category": "F",
+  "fixed_commit": "",
+  "files": [
+   "j-lawyer-client/src/main/resources/resources/suneditor/suneditor-template.html",
+   "j-lawyer-client/src/main/java/com/jdimension/jlawyer/client/editors/webview/WebViewHtmlEditorPanel.java"
+  ],
+  "effort": "S",
+  "risk": "med",
+  "cause": "suneditor-template.html sizes the editor with fixed viewport math (.se-wrapper height calc(100vh - 50px), #editor 100vh) plus body overflow hidden, which assumes one 50px toolbar row. With the 1.15 WebView zoom set in WebViewHtmlEditorPanel.initializeFX, the toolbar wraps to two or more rows in narrower windows. The editor then gets taller than the viewport: the last lines are clipped, and caret scrolling can push the top out of view with no scrollbar to bring it back. Ctrl+wheel zoom-out un-wraps the toolbar, which matches the reporter's observation",
+  "maintainer": "Suspects a WebView bug caused by the 115% zoom factor and asked whether Ctrl+wheel zoom helps (it does).",
+  "notes": "Fix: flex column layout (toolbar auto, wrapper flex 1 with min-height 0), or size the wrapper from the real toolbar height on resize instead of 100vh-50px. Can be pre-checked by opening the template in a browser at narrow width, but the final check needs the JavaFX client (Linux or Windows). This is a code-level hypothesis, not reproduced here.",
+  "user_visible": true,
+  "priority": 3,
+  "confidence": "med"
+ },
+ {
+  "number": 3170,
+  "title": "REST invoice pools: smallBusiness=true bedeutet 'USt ausweisen'",
+  "kind": "bug",
+  "area": "server",
+  "category": "D",
+  "fixed_commit": "",
+  "files": [
+   "j-lawyer-server/j-lawyer-io/src/main/java/org/jlawyer/io/rest/v7/pojo/RestfulInvoicePoolV7.java",
+   "j-lawyer-server/j-lawyer-io/src/main/java/org/jlawyer/io/rest/v7/pojo/RestfulInvoiceV7.java",
+   "j-lawyer-server/j-lawyer-io/src/main/java/org/jlawyer/io/rest/v7/InvoicesEndpointV7.java",
+   "j-lawyer-client/src/main/java/com/jdimension/jlawyer/client/configuration/InvoicePoolsSetupDialog.java"
+  ],
+  "effort": "S",
+  "risk": "low",
+  "cause": "Field semantics were inverted over time: InvoicePoolsSetupDialog.chkSmallBusiness and InvoiceDialog.chkTaxes (both labelled 'USt ausweisen') bind directly to smallBusiness, and RestfulInvoicePoolV7/RestfulInvoiceV7 expose it unchanged, so true means VAT is shown.",
+  "maintainer": "Field was reinterpreted during the project, renaming would break existing REST clients, asks whether it is a real problem.",
+  "notes": "Not a functional bug. Options need maintainer OK: document the semantics via ApiOperation notes or ApiModelProperty (no v7 pojo uses ApiModelProperty yet, would be a new pattern) or add an additive alias field such as showTaxes. Doc-only PR is tiny if he agrees.",
+  "user_visible": false,
+  "priority": 0,
+  "confidence": "high"
+ },
+ {
   "number": 3158,
   "title": "Wiedervorlagen kategorisieren",
   "kind": "enhancement",
@@ -396,6 +702,27 @@
   "user_visible": true,
   "priority": 0,
   "confidence": "high"
+ },
+ {
+  "number": 3149,
+  "title": "Splitbuchungen im Aktenkonto",
+  "kind": "enhancement",
+  "area": "finance",
+  "category": "X",
+  "fixed_commit": "",
+  "files": [
+   "j-lawyer-client/src/main/java/com/jdimension/jlawyer/client/editors/files/CaseAccountEntryDialog.java",
+   "j-lawyer-client/src/main/java/com/jdimension/jlawyer/client/editors/files/ArchiveFilePanel.java",
+   "j-lawyer-server-entities/src/main/java/com/jdimension/jlawyer/persistence/CaseAccountEntry.java"
+  ],
+  "effort": "L",
+  "risk": "med",
+  "cause": "Feature request: new booking dialog with a total, several in/out fields, net/gross flag and tax rate per field, exact reconciliation to the total.",
+  "maintainer": "Specified by j-dimension in the issue body (new dialog, net/gross and tax rate per field, total must be met exactly).",
+  "notes": "Large new UI feature (new dialog plus .form). CaseAccountEntry has no tax fields, so keeping the tax split may need a schema change. The comment about spreading one payment over several invoices is a second feature. The existing SplitPaymentDialog only splits an account entry into outgoing payments.",
+  "user_visible": true,
+  "priority": 0,
+  "confidence": "med"
  },
  {
   "number": 3148,
@@ -438,6 +765,26 @@
   "confidence": "high"
  },
  {
+  "number": 3135,
+  "title": "Rundungsfehler: USt 95,665 erscheint als 95,66 statt 95,67",
+  "kind": "bug",
+  "area": "finance",
+  "category": "FIXED",
+  "fixed_commit": "ae97993a2, 88127b32c",
+  "files": [
+   "j-lawyer-client/src/main/java/com/jdimension/jlawyer/client/editors/files/InvoiceDialog.java",
+   "j-lawyer-server/j-lawyer-server-ejb/src/main/java/com/jdimension/jlawyer/services/ArchiveFileService.java"
+  ],
+  "effort": "S",
+  "risk": "low",
+  "cause": "Clients up to 3.3 rounded the VAT per position and summed the rounded values (InvoiceDialog.updateTotals and getInvoicePositionsAsTable), which yields 95,66 for some position splits while the plugin overview rounds once on the total net. ae97993a2 (client) and 88127b32c (server updateInvoiceTotal), both 2025-08-01 and first released in 3.4.0, round the tax once on the cumulated net per tax rate (HALF_UP), which gives 95,67 for 503,50 net.",
+  "maintainer": "",
+  "notes": "Issue filed 2025-10-14 while 3.3.x was the current release (git: ae97993a2 is not in tag 3.3.0.0 but in 3.4.0.x). The 3.6 BigDecimal plugin rework (880d0ac13) removes remaining float artifacts on the plugin side. Ask the reporter to retest on 3.4 or later. Same rounding family as #2831 and #2814.",
+  "user_visible": true,
+  "priority": 0,
+  "confidence": "med"
+ },
+ {
   "number": 3101,
   "title": "Erweiterte Sprecherbenennung bei Transkription",
   "kind": "enhancement",
@@ -455,6 +802,27 @@
   "user_visible": true,
   "priority": 0,
   "confidence": "med"
+ },
+ {
+  "number": 3001,
+  "title": "Kontoauszug-Import Volksbank: Verwendungszweck wird nicht gelesen",
+  "kind": "bug",
+  "area": "finance",
+  "category": "X",
+  "fixed_commit": "",
+  "files": [
+   "j-lawyer-server-entities/src/main/resources/db/migration/V3_2_0_13__MoreBankstatementConfigs.sql",
+   "j-lawyer-client/src/main/java/com/jdimension/jlawyer/client/editors/finance/ImportBankStatementFrame.java",
+   "j-lawyer-client/src/main/java/com/jdimension/jlawyer/client/configuration/BankstatementCsvConfigDialog.java"
+  ],
+  "effort": "S",
+  "risk": "low",
+  "cause": "The seeded CSV config 'volksbank-csv' (Flyway V3_2_0_13) maps col_purpose=8, which in the current VR-Bank export layout (Buchungstag 4, Name 6, IBAN 7, BIC 8, Buchungstext 9, Verwendungszweck 10, Betrag 11, Waehrung 12) is the BIC column. The structurally identical GRENKE config in V3_2_0_3 uses 4,6,9,7,10,11,12 while Volksbank has 4,6,9,7,8,11,12 - a typo, purpose should be 10. ImportBankStatementFrame reads nextLine[csvConfig.getColumnPurpose()] 0-based.",
+  "maintainer": "Asked for an anonymised sample CSV with unchanged structure.",
+  "notes": "Cause located with high confidence, but the fix is a one-line data migration (update config_bankstatement set col_purpose=10 where id='volksbank-csv' and col_purpose=8) in a new Flyway script, so X per the rules. Best handed to the maintainer as an issue comment. User workaround: set the Verwendungszweck column to 10 in the bank statement CSV settings (BankstatementCsvConfigDialog). openspec change update-bankstatement-import-batch does not touch the configs.",
+  "user_visible": true,
+  "priority": 0,
+  "confidence": "high"
  },
  {
   "number": 2999,
@@ -603,6 +971,26 @@
   "confidence": "high"
  },
  {
+  "number": 2888,
+  "title": "Plain-text mail templates: empty placeholder leaves a double space",
+  "kind": "bug",
+  "area": "e-mail",
+  "category": "F",
+  "fixed_commit": "",
+  "files": [
+   "j-lawyer-server-common/src/main/java/com/jdimension/jlawyer/documents/CommonTemplatesUtil.java",
+   "j-lawyer-client/src/main/java/com/jdimension/jlawyer/client/mail/SendEmailFrame.java"
+  ],
+  "effort": "S",
+  "risk": "low",
+  "cause": "CommonTemplatesUtil.replacePlaceHolders replaces each {{KEY}} with value.trim() and ignores the surrounding whitespace, so 'Herr {{MANDANT_TITEL}} {{MANDANT_NAME}}' with an empty title gives two spaces. In HTML the renderer collapses them, in text/plain mails (tpl.isText() branch of SendEmailFrame.cmbTemplatesActionPerformed) they stay visible",
+  "maintainer": "",
+  "notes": "Fix: when a placeholder resolves to empty and sits between two spaces, drop one of them. Use an opt-in overload or helper for mail text bodies, unit-testable in j-lawyer-server-common, because replacePlaceHolders is shared with beA, file names, Ingo prompts and REST. Side finding: replaceAll(keyRegX, value) does not quote the replacement, so a value containing a dollar sign or backslash throws (Matcher.quoteReplacement is missing). Related to the already covered DOCX trailing-space fix.",
+  "user_visible": true,
+  "priority": 3,
+  "confidence": "high"
+ },
+ {
   "number": 2880,
   "title": "macOS: clicks in the document list often not recognised",
   "kind": "bug",
@@ -643,6 +1031,26 @@
   "confidence": "high"
  },
  {
+  "number": 2850,
+  "title": "Beleg bezahlt markieren: Teilzahlung wird als voll bezahlt angezeigt",
+  "kind": "bug",
+  "area": "finance",
+  "category": "F",
+  "fixed_commit": "",
+  "files": [
+   "j-lawyer-client/src/main/java/com/jdimension/jlawyer/client/editors/files/InvoiceEntryPanel.java",
+   "j-lawyer-client/src/main/java/com/jdimension/jlawyer/client/editors/files/ArchiveFilePanel.java"
+  ],
+  "effort": "S",
+  "risk": "low",
+  "cause": "InvoiceEntryPanel.cmdMarkAsPayedActionPerformed calls setPaidTotal(gross, gross) whenever caseView.addAccountEntry() returned true, ignoring the amount actually booked in CaseAccountEntryDialog (partial payment), so the row shows fully paid until the case is reopened and ArchiveFilePanel.loadAccountEntries() recomputes it.",
+  "maintainer": "Point 1 is by design: Cancel only skips the account booking, the invoice may still be marked paid without a booking. For point 2 asked whether the amount was edited manually (reporter: no, display issue only).",
+  "notes": "Only point 2 is F. Fix by recomputing paid via getAccountEntriesForInvoice (or the shared helper proposed for #2278) after the booking. Fix together with #2278 in one PR (same symptom: Belege paid/open not refreshed). Side finding: the proposed amount uses totalGross even for invoices with smallBusiness=false, and the server stores totalGross including VAT for those.",
+  "user_visible": true,
+  "priority": 4,
+  "confidence": "high"
+ },
+ {
   "number": 2843,
   "title": "Priorität für Kalendereinträge und Benachrichtigungen (Desktop)",
   "kind": "enhancement",
@@ -659,6 +1067,48 @@
   "cause": "Desktop due list is sorted by type, day, time, case id in the comparator of ReviewsDueTimerTask (around line 859). Calendar entries have neither a priority nor a creation date column (ArchiveFileReviewsBean), so a priority sort key needs a new case_events column.",
   "maintainer": "Likes priorities as a simple secondary sort key within a day (instead of configurable multi-criteria sorting), also suggests an optional per-entry notification with prominent display or popup shortly before appointments.",
   "notes": "Needs schema change (priority column, plus REST, web, sync). The notification part is largely covered by event reminders (79b864dad, close #3285: reminder_minutes, ReminderNotificationDialog, archived openspec add-calendar-reminders).",
+  "user_visible": true,
+  "priority": 0,
+  "confidence": "high"
+ },
+ {
+  "number": 2831,
+  "title": "Cent-Abweichung beim Bezahlt-Buchen ueber den gruenen Haken",
+  "kind": "bug",
+  "area": "finance",
+  "category": "FIXED",
+  "fixed_commit": "9377bde17, 88127b32c, ae97993a2",
+  "files": [
+   "j-lawyer-server/j-lawyer-server-ejb/src/main/java/com/jdimension/jlawyer/services/ArchiveFileService.java",
+   "j-lawyer-client/src/main/java/com/jdimension/jlawyer/client/editors/files/InvoiceEntryPanel.java",
+   "j-lawyer-client/src/main/java/com/jdimension/jlawyer/client/editors/files/InvoiceDialog.java"
+  ],
+  "effort": "S",
+  "risk": "low",
+  "cause": "Before 9377bde17 (2025-05-15) ArchiveFileService.updateInvoiceTotal summed unrounded per-position gross values (tax factor at scale 2 HALF_EVEN) while the client printed per-position rounded taxes, so the stored totalGross used by the mark-as-paid booking could differ by a cent from the printed invoice. Since 88127b32c and ae97993a2 (2025-08-01) server, dialog totals and invoice table all round the tax once on the cumulated net per rate, so the booked amount equals the printed total.",
+  "maintainer": "",
+  "notes": "Issue dated 2025-02-07 predates all three commits. A residual mismatch is only possible when a plugin starts from a gross amount (see #2814, D). Ask reporter to retest on 3.4 or later.",
+  "user_visible": true,
+  "priority": 0,
+  "confidence": "med"
+ },
+ {
+  "number": 2814,
+  "title": "Pauschalhonorar-Plugin: 400,00 EUR brutto kommt als 399,99 an",
+  "kind": "bug",
+  "area": "finance",
+  "category": "D",
+  "fixed_commit": "",
+  "files": [
+   "j-lawyer-client/src/main/java/com/jdimension/jlawyer/client/editors/files/InvoiceDialog.java",
+   "j-lawyer-client/src/main/java/com/jdimension/jlawyer/client/plugins/calculation/CalculationPlugin.java",
+   "j-lawyer-server/j-lawyer-server-ejb/src/main/java/com/jdimension/jlawyer/services/ArchiveFileService.java"
+  ],
+  "effort": "M",
+  "risk": "med",
+  "cause": "The plugin derives a rounded net (336,13) from the gross input and only that net InvoicePosition is transferred. The invoice then computes forward (net times 1,19 = 399,99). No information about the original gross input reaches the invoice model.",
+  "maintainer": "Mathematically not a bug, recommends transferring a net amount. Would change the logic if someone researches a tax-law compliant approach, e.g. a warning plus manual gross adjustment.",
+  "notes": "Needs a product and tax decision (gross-input flag in the plugin contract as suggested by an-mus, or a manual gross override), touches the plugin contract in j-lawyer-calculations and probably the persisted model. Related #2831, #3135, #3149 (net/gross per field).",
   "user_visible": true,
   "priority": 0,
   "confidence": "high"
@@ -684,6 +1134,47 @@
   "confidence": "med"
  },
  {
+  "number": 2778,
+  "title": "Zeiterfassung: alle Zeiten als eine Gesamtposition abrechnen",
+  "kind": "enhancement",
+  "area": "finance",
+  "category": "D",
+  "fixed_commit": "",
+  "files": [
+   "j-lawyer-client/src/main/java/com/jdimension/jlawyer/client/editors/files/TimesheetBillingDialog.java"
+  ],
+  "effort": "S",
+  "risk": "low",
+  "cause": "TimesheetBillingDialog.cmdBillingActionPerformed aggregates time entries per name, unit price and tax rate (aggregatedPositions map), there is no option to collapse them into a single position.",
+  "maintainer": "Requested by j-dimension on behalf of a user.",
+  "notes": "Small, but open details: position name, units (1 vs. total hours) and unit price, mixed tax rates, interaction with the timesheet tables in the document. Could become F if j-dimension specifies these. Needs a .form change for an option checkbox.",
+  "user_visible": true,
+  "priority": 0,
+  "confidence": "med"
+ },
+ {
+  "number": 2747,
+  "title": "Girocode: konfigurierbarer Verwendungszweck",
+  "kind": "enhancement",
+  "area": "finance",
+  "category": "F",
+  "fixed_commit": "",
+  "files": [
+   "j-lawyer-client/src/main/java/com/jdimension/jlawyer/client/configuration/GirocodeConfigurationDialog.java",
+   "j-lawyer-client/src/main/java/com/jdimension/jlawyer/client/editors/files/InvoiceDialog.java",
+   "j-lawyer-client/src/main/java/com/jdimension/jlawyer/client/editors/files/GirocodeDialog.java",
+   "j-lawyer-server-common/src/main/java/com/jdimension/jlawyer/server/services/settings/ServerSettingsKeys.java"
+  ],
+  "effort": "M",
+  "risk": "low",
+  "cause": "The Girocode purpose is hard-wired to the invoice number: InvoiceDialog.cmdGiroCodeActionPerformed passes lblInvoiceNumber to GirocodeDialog, and cmdCreateInvoiceDocumentActionPerformed passes currentEntry.getInvoiceNumber() to InvoiceService.getGiroCode().",
+  "maintainer": "Authored by j-dimension: options invoice number, case file number, or both.",
+  "notes": "Self-contained: new server setting key (key/value table, no schema change), a combo in GirocodeConfigurationDialog (plus .form), one purpose-builder helper (unit-testable, max 140 chars) used at both call sites, optionally the girocode settings in ConfigurationEndpointV7. Side finding: cmdGiroCodeActionPerformed parses the total via floatValue(), cent errors possible above roughly 131k EUR.",
+  "user_visible": true,
+  "priority": 2,
+  "confidence": "med"
+ },
+ {
   "number": 2736,
   "title": "Abwesenheiten im Datumsauswahl-Popup hervorheben",
   "kind": "enhancement",
@@ -700,6 +1191,47 @@
   "cause": "MultiCalDialog shows three plain com.toedter JDayChooser instances (jcalendar 1.3.2, which has no IDateEvaluator), days are never decorated. Conflicts with absences are only detected after saving via CalendarUtils.checkForConflicts (#1274).",
   "maintainer": "Confirmed with the reporter that this is about the small date selection popup.",
   "notes": "Needs decisions: whose entries (current user vs. selected assignee, the popup is used in about 28 places without that context), which entries count as absence, colours, hover tooltips, extra server query per 3-month range. Overlaps #299 (holiday colouring in the same popup), a shared day-decoration mechanism would serve both.",
+  "user_visible": true,
+  "priority": 0,
+  "confidence": "high"
+ },
+ {
+  "number": 2702,
+  "title": "Auswertungen Belege/Aktenkonto: USt-Spalten und kumulierte Werte",
+  "kind": "enhancement",
+  "area": "finance",
+  "category": "D",
+  "fixed_commit": "",
+  "files": [
+   "j-lawyer-server/j-lawyer-server-ejb/src/main/java/com/jdimension/jlawyer/services/ReportService.java",
+   "j-lawyer-client/src/main/java/com/jdimension/jlawyer/client/editors/reporting/ReportingPanel.java"
+  ],
+  "effort": "M",
+  "risk": "med",
+  "cause": "Invoice reports expose only Nettobetrag, Bruttobetrag and Zahlungseingang. Account entries carry no tax information, so 'gezahlte USt' cannot be derived without an allocation rule.",
+  "maintainer": "Authored by j-dimension: VAT in separate columns (especially paid VAT) plus cumulated tables, e.g. for the quarterly VAT pre-registration.",
+  "notes": "A plain USt column (total_gross minus total) is trivial, but paid VAT and the cumulation semantics need a decision (proportional allocation of payments, cash vs. accrual). total_gross includes VAT even for smallBusiness=false invoices. Recent report work by derspotter (e.g. #3689) touches the same ReportService.",
+  "user_visible": true,
+  "priority": 0,
+  "confidence": "med"
+ },
+ {
+  "number": 2697,
+  "title": "Inbox option: move mail to folder xyz after assignment to case",
+  "kind": "enhancement",
+  "area": "e-mail",
+  "category": "D",
+  "fixed_commit": "",
+  "files": [
+   "j-lawyer-client/src/main/java/com/jdimension/jlawyer/client/mail/EmailInboxPanel.java",
+   "j-lawyer-client/src/main/java/com/jdimension/jlawyer/client/settings/ClientSettings.java",
+   "j-lawyer-client/src/main/java/com/jdimension/jlawyer/client/bea/BeaInboxPanel.java"
+  ],
+  "effort": "M",
+  "risk": "med",
+  "cause": "Feature. beA has a 'move to imported' option (ClientSettings.CONF_BEA_MOVETOIMPORTEDENABLED in BeaInboxPanel), but the e-mail inbox has no configurable move-after-assignment target",
+  "maintainer": "Maintainer-created customer ticket with an empty body.",
+  "notes": "Needs a decision on where the target folder is configured (per mailbox or per user) and on the UI. Could mirror the beA checkbox, but there is no spec.",
   "user_visible": true,
   "priority": 0,
   "confidence": "high"
@@ -725,6 +1257,46 @@
   "user_visible": true,
   "priority": 0,
   "confidence": "med"
+ },
+ {
+  "number": 2680,
+  "title": "Open in Thunderbird: paragraph formatting of HTML templates wrong",
+  "kind": "bug",
+  "area": "e-mail",
+  "category": "L",
+  "fixed_commit": "",
+  "files": [
+   "j-lawyer-client/src/main/java/com/jdimension/jlawyer/client/mail/SendEmailFrame.java"
+  ],
+  "effort": "S",
+  "risk": "med",
+  "cause": "SendEmailFrame.cmdOpenTbActionPerformed passes the raw editor HTML as body='...' to 'thunderbird -compose'. It sends no format=html and skips the default-font wrapper div that the normal send path adds. SunEditor 'Absatz' <p> blocks then get Thunderbird's default 1em margins. A single quote in the body (an apostrophe in the text) probably ends the body='...' value and truncates the mail",
+  "maintainer": "",
+  "notes": "Reported in the SHEF era (2024-11). The editor is now SunEditor, so the generated HTML is different today. Needs Thunderbird to verify and no sample template is attached. Escaping quotes and commas in the -compose string could be a separate small fix.",
+  "user_visible": true,
+  "priority": 0,
+  "confidence": "low"
+ },
+ {
+  "number": 2641,
+  "title": "E-Rechnung: Zahlungsart ausdifferenzieren (bereits bezahlt, Aufrechnung)",
+  "kind": "enhancement",
+  "area": "finance",
+  "category": "D",
+  "fixed_commit": "",
+  "files": [
+   "j-lawyer-client/src/main/java/com/jdimension/jlawyer/client/utils/einvoice/EInvoiceUtils.java",
+   "j-lawyer-server-entities/src/main/java/com/jdimension/jlawyer/persistence/Invoice.java",
+   "j-lawyer-client/src/main/java/com/jdimension/jlawyer/client/editors/files/InvoiceDialog.java"
+  ],
+  "effort": "M",
+  "risk": "med",
+  "cause": "Invoice only knows BANKTRANSFER, DIRECTDEBIT and OTHER (Invoice.PAYMENTTYPES), and EInvoiceUtils maps them to fixed payment-term texts that always request payment ('Bitte ueberweisen ...' or 'zahlbar bis ...').",
+  "maintainer": "",
+  "notes": "Labelled bug but is a feature request. New payment types plus UNTDID 4461 payment means codes (e.g. 10 cash, 48 card, 97 clearing/set-off) and prepaid amount handling (BT-113) need a design decision. paymentType is a String column, so no schema change, but REST and placeholders are affected.",
+  "user_visible": true,
+  "priority": 0,
+  "confidence": "high"
  },
  {
   "number": 2592,
@@ -932,6 +1504,26 @@
   "confidence": "med"
  },
  {
+  "number": 2278,
+  "title": "Aktenkonto-Eingaben aktualisieren die Beleguebersicht nicht",
+  "kind": "bug",
+  "area": "finance",
+  "category": "F",
+  "fixed_commit": "",
+  "files": [
+   "j-lawyer-client/src/main/java/com/jdimension/jlawyer/client/editors/files/ArchiveFilePanel.java",
+   "j-lawyer-client/src/main/java/com/jdimension/jlawyer/client/editors/files/InvoiceEntryPanel.java"
+  ],
+  "effort": "S",
+  "risk": "low",
+  "cause": "Per-invoice paid/open values are only computed in ArchiveFilePanel.loadAccountEntries(). addAccountEntry, cmdEditAccountEntryActionPerformed, cmdRemoveAccountEntryActionPerformed and cmdDuplicateAccountEntryActionPerformed update the table and updateAccountTotals() but never the InvoiceEntryPanel paid totals. In addition InvoiceEntryPanel.setPaidTotal uses a broken sentinel since d1498e4b0 (paid != BigDecimal.valueOf(Float.MIN_VALUE) is a reference compare, always true), so after editing an invoice via cmdOpen the row shows 0,00 paid and the full amount open.",
+  "maintainer": "Opened by j-dimension himself from a user report in #2272.",
+  "notes": "Fix: extract the per-invoice paid calculation from loadAccountEntries into a helper over the table rows, call it from updateAccountTotals(), and replace the Float.MIN_VALUE sentinel with an explicit overload or null. Natural single PR together with #2850 point 2. Logic is simple enough to review, the sentinel bug is a clear regression.",
+  "user_visible": true,
+  "priority": 4,
+  "confidence": "high"
+ },
+ {
   "number": 2223,
   "title": "Messaging area lacks a heading",
   "kind": "other",
@@ -949,6 +1541,45 @@
   "user_visible": true,
   "priority": 0,
   "confidence": "low"
+ },
+ {
+  "number": 2203,
+  "title": "Rechnungsnummernkreis zurueckgesetzt: Fehler bei bereits vergebener Nummer",
+  "kind": "bug",
+  "area": "finance",
+  "category": "F",
+  "fixed_commit": "",
+  "files": [
+   "j-lawyer-server/j-lawyer-server-ejb/src/main/java/com/jdimension/jlawyer/services/ArchiveFileService.java",
+   "j-lawyer-server/j-lawyer-server-ejb/src/main/java/com/jdimension/jlawyer/services/InvoiceService.java"
+  ],
+  "effort": "S",
+  "risk": "low",
+  "cause": "80ab1c597 (2024-04, issue #2394) added a findByInvoiceNumber conflict check with a clear message only to ArchiveFileService.addInvoice. updateInvoiceType (pool change via the pencil button, the reporter's workflow per #2169) still sets nextInvoiceNumber on the managed entity without a check, so a reset pool runs into the unique index IDX_INVOICES_INVOICENO_UQ at commit, which likely also rolls back the pool lastIndex increment so every retry fails the same way.",
+  "maintainer": "Prefers setting a wrong invoice to cancelled (storniert) instead of deleting it and resetting the pool.",
+  "notes": "The new-invoice path is already fixed by 80ab1c597. Remaining small fix: compute the next number into a local variable, check findByInvoiceNumber and throw the same friendly exception before mutating the managed entity. The reporter's wish (warn when resetting the pool start index in the setup dialog) is optional and would be D. Screenshot not available, so the exact failing path is inferred.",
+  "user_visible": true,
+  "priority": 3,
+  "confidence": "med"
+ },
+ {
+  "number": 2169,
+  "title": "Belegdialog: Speichern bei offenem Bearbeitungsmodus verwirft Nummernkreis",
+  "kind": "bug",
+  "area": "finance",
+  "category": "F",
+  "fixed_commit": "",
+  "files": [
+   "j-lawyer-client/src/main/java/com/jdimension/jlawyer/client/editors/files/InvoiceDialog.java"
+  ],
+  "effort": "S",
+  "risk": "low",
+  "cause": "InvoiceDialog.cmdSaveActionPerformed and save() ignore a pending (enabled, unconfirmed) cmbInvoicePool/cmbInvoiceType selection. Only cmdConfirmInvoiceNumberActionPerformed calls updateInvoiceType, so a changed pool or type is silently dropped on save.",
+  "maintainer": "The pool/type change must be confirmed explicitly (otherwise generated documents carry a wrong number), but a warning on save when a pool change is still unconfirmed would be acceptable.",
+  "notes": "Implement the maintainer's suggestion: on save, if the combos are enabled and differ from currentEntry (lastPoolId, invoiceType), ask whether to confirm now, save without the change, or go back. Same method area as #3371, keep separate PRs and do #3371 first.",
+  "user_visible": true,
+  "priority": 3,
+  "confidence": "high"
  },
  {
   "number": 2111,
@@ -969,6 +1600,26 @@
   "user_visible": true,
   "priority": 2,
   "confidence": "high"
+ },
+ {
+  "number": 2089,
+  "title": "Read-receipt request asked again and blocks opening the mail",
+  "kind": "bug",
+  "area": "e-mail",
+  "category": "FIXED",
+  "fixed_commit": "81e2296be",
+  "files": [
+   "j-lawyer-client/src/main/java/com/jdimension/jlawyer/client/mail/MailContentUI.java",
+   "j-lawyer-client/src/main/java/com/jdimension/jlawyer/client/mail/EmailInboxPanel.java"
+  ],
+  "effort": "S",
+  "risk": "low",
+  "cause": "The old client-side IMAP path asked in MailContentUI.setMessageImpl (EmailUtils.isReceiptRequested) on every load, and the modal question blocked opening the separate window",
+  "maintainer": "",
+  "notes": "The inbox now uses the server-based path (8f1b3ee5c / 81e2296be, 2026-03). setMessageServerBased only asks when the message was unread before this load (finalWasUnread), and the dialog is shown asynchronously, so the reported click-then-double-click flow no longer asks twice. Remaining edge case: a direct double-click on an unread mail starts two loads (displayMessage and ViewEmailFrame) that can both see 'unread' and ask twice.",
+  "user_visible": true,
+  "priority": 0,
+  "confidence": "med"
  },
  {
   "number": 2064,
@@ -1010,6 +1661,45 @@
   "user_visible": true,
   "priority": 0,
   "confidence": "high"
+ },
+ {
+  "number": 1883,
+  "title": "Mailbox settings dialog silently discards edits when switching mailbox",
+  "kind": "bug",
+  "area": "e-mail",
+  "category": "F",
+  "fixed_commit": "",
+  "files": [
+   "j-lawyer-client/src/main/java/com/jdimension/jlawyer/client/configuration/MailboxSetupDialog.java"
+  ],
+  "effort": "M",
+  "risk": "med",
+  "cause": "MailboxSetupDialog.tblMailboxesMouseClicked calls updatedUI(ms) for the newly clicked mailbox and overwrites every form field without comparing it to the mailbox currently shown. There is no dirty tracking at all",
+  "maintainer": "",
+  "notes": "Fix: remember the displayed mailbox, compare the form against it (a helper that builds a MailboxSetup from the form, also reused by cmdSaveActionPerformed) and ask save/discard before switching. Caveat: the HTML signature comes from the WebView editor, whose getText() may normalize the HTML, so compare it carefully to avoid false prompts. Split out of #1881.",
+  "user_visible": true,
+  "priority": 2,
+  "confidence": "med"
+ },
+ {
+  "number": 1881,
+  "title": "Mail client: no IPv6, missing timeouts, client freezes",
+  "kind": "bug",
+  "area": "e-mail",
+  "category": "L",
+  "fixed_commit": "",
+  "files": [
+   "j-lawyer-server/j-lawyer-server-ejb/src/main/java/com/jdimension/jlawyer/services/EmailService.java",
+   "docker/wildfly/standalone.conf"
+  ],
+  "effort": "S",
+  "risk": "low",
+  "cause": "Mail traffic moved from the client to the server (8f1b3ee5c, 2026-03), so the client launcher's -Djava.net.preferIPv4Stack=true no longer affects mail, and IMAP got connect/read timeouts in e9f331df2. The SMTP sessions in EmailService (testSmtpConnection and the send path near line 2468) still set no mail.smtp(s).connectiontimeout/timeout/writetimeout, and the docker WildFly config still forces preferIPv4Stack=true",
+  "maintainer": "Pointed to the JavaMail IMAP/SMTP timeout properties (set them as strings). Said the IPv4 flags in the repo are test configs and the problem may be hard to reproduce.",
+  "notes": "Mostly obsolete for the client (freeze, IPv4) since the server move. What remains: SMTP timeouts on the server (a tiny change that could be split out as an F item) and IPv6 for the server/docker setup (a deployment decision). Verifying needs a real mail server and an IPv6 network. #1883 was split out of this ticket.",
+  "user_visible": true,
+  "priority": 0,
+  "confidence": "med"
  },
  {
   "number": 1828,
@@ -1116,6 +1806,27 @@
   "confidence": "med"
  },
  {
+  "number": 1694,
+  "title": "Inline attachments without file name are not shown",
+  "kind": "bug",
+  "area": "e-mail",
+  "category": "F",
+  "fixed_commit": "",
+  "files": [
+   "j-lawyer-server-common/src/main/java/com/jdimension/jlawyer/email/CommonMailUtils.java",
+   "j-lawyer-client/src/main/java/com/jdimension/jlawyer/client/mail/MailContentUI.java",
+   "j-lawyer-server/j-lawyer-server-ejb/src/main/java/com/jdimension/jlawyer/services/EmailService.java"
+  ],
+  "effort": "M",
+  "risk": "med",
+  "cause": "CommonMailUtils.getAttachmentInfo only lists inline parts (and attachment parts other than message/rfc822) when part.getFileName() != null, and getAttachmentPart looks parts up by that name. Nameless inline parts are therefore invisible in the legacy path (MailContentUI.setMessageImpl, used for .eml documents in cases) and skipped by MailboxScannerTask",
+  "maintainer": "Maintainer-authored. The sample .eml is in his own case 38722.",
+  "notes": "The inbox now uses the server path (EmailService.extractAttachments), which makes up names (contentId or inline_N), so only the .eml document preview and the server scanner still drop these parts. Fix: generate a stable name in getAttachmentInfo (like the existing Nachricht_<size>.eml rule) and match it in getAttachmentPart. Unit-testable with a hand-built MimeMessage. Decide whether CID images referenced by the body stay hidden.",
+  "user_visible": true,
+  "priority": 2,
+  "confidence": "med"
+ },
+ {
   "number": 1596,
   "title": "beA: eEB-Anforderung nach Abgabe unveraendert angezeigt",
   "kind": "bug",
@@ -1154,6 +1865,26 @@
   "user_visible": true,
   "priority": 3,
   "confidence": "high"
+ },
+ {
+  "number": 1447,
+  "title": "macOS: Shift+Enter does not insert a line break in HTML input",
+  "kind": "bug",
+  "area": "e-mail",
+  "category": "FIXED",
+  "fixed_commit": "1c0da919a",
+  "files": [
+   "j-lawyer-client/src/main/resources/resources/suneditor/suneditor-template.html",
+   "j-lawyer-client/src/main/java/com/jdimension/jlawyer/client/editors/webview/WebViewHtmlEditorPanel.java"
+  ],
+  "effort": "S",
+  "risk": "low",
+  "cause": "The old SHEF HTML editor did not map Shift+Enter to <br> on macOS",
+  "maintainer": "Said the client used a third-party library and he would first have to check whether it can be customized.",
+  "notes": "Obsolete: SHEF was replaced by the JavaFX WebView + SunEditor editor (7ecea86e7 to 1c0da919a, 2025-11, issue #3184), which is used for mails and notes. SunEditor's keydown handler inserts <br> on Shift+Enter (case 13 in suneditor.min.js). Not verified on a macOS WebView, hence med.",
+  "user_visible": true,
+  "priority": 0,
+  "confidence": "med"
  },
  {
   "number": 1411,
@@ -1214,6 +1945,68 @@
   "user_visible": true,
   "priority": 4,
   "confidence": "high"
+ },
+ {
+  "number": 1311,
+  "title": "Offer case-specific involvement e-mail in recipient dropdown",
+  "kind": "enhancement",
+  "area": "e-mail",
+  "category": "X",
+  "fixed_commit": "",
+  "files": [
+   "j-lawyer-client/src/main/java/com/jdimension/jlawyer/client/mail/SendEmailFrame.java",
+   "j-lawyer-server-entities/src/main/java/com/jdimension/jlawyer/persistence/ArchiveFileAddressesBean.java"
+  ],
+  "effort": "M",
+  "risk": "med",
+  "cause": "Feature. The case-specific e-mail lives in a user-defined custom field (custom1..3) of the involvement, which has no semantic e-mail attribute. The recipient popup (SendEmailFrame.addRecipientCandidate) therefore only offers contact addresses",
+  "maintainer": "Suggested first adding standard fields (contact person, e-mail) to the involvement in a separate ticket, and then using that e-mail attribute in places like this.",
+  "notes": "Depends on new involvement columns, so it needs a schema change. The contact-emails spec only covers addresses on the contact itself.",
+  "user_visible": true,
+  "priority": 0,
+  "confidence": "high"
+ },
+ {
+  "number": 1207,
+  "title": "Mail folder list: folder names truncated in tree",
+  "kind": "bug",
+  "area": "e-mail",
+  "category": "R",
+  "fixed_commit": "",
+  "files": [
+   "j-lawyer-client/src/main/java/com/jdimension/jlawyer/client/mail/EmailFolderTreeCellRenderer.java",
+   "j-lawyer-client/src/main/java/com/jdimension/jlawyer/client/mail/EmailInboxPanel.java",
+   "j-lawyer-client/src/main/java/com/jdimension/jlawyer/client/mail/FolderContainer.java"
+  ],
+  "effort": "S",
+  "risk": "low",
+  "cause": "Most likely the classic JTree size cache: BasicTreeUI caches each node's preferred width. EmailFolderTreeCellRenderer switches to a bold font when a folder has unread mail (and the label grows), but the code that updates counts (FolderContainer.setCachedUnread, the async refresh, markAsRead) does not call DefaultTreeModel.nodeChanged. The stale width is used and the label is clipped",
+  "maintainer": "Calling nodeChanged inside the renderer would recurse. High effort, modest benefit, postponed (2021). In 2026 he could not reproduce it and left it open.",
+  "notes": "The reporter still sees it in 2026, the maintainer cannot reproduce it. A fix would call nodeChanged on folder nodes after unread counts change (outside the renderer). Cosmetic and not checkable headless.",
+  "user_visible": true,
+  "priority": 0,
+  "confidence": "med"
+ },
+ {
+  "number": 1205,
+  "title": "'als PDF senden' asks about open document instead of waiting",
+  "kind": "bug",
+  "area": "e-mail",
+  "category": "F",
+  "fixed_commit": "",
+  "files": [
+   "j-lawyer-client/src/main/java/com/jdimension/jlawyer/client/editors/files/ArchiveFilePanel.java",
+   "j-lawyer-client/src/main/java/com/jdimension/jlawyer/client/editors/files/WaitForDocumentAction.java",
+   "j-lawyer-client/src/main/java/com/jdimension/jlawyer/client/editors/files/SendPDFAction.java"
+  ],
+  "effort": "M",
+  "risk": "low",
+  "cause": "ArchiveFilePanel.mnuSendDocumentPDFActionPerformed (and mnuSendBeaDocumentPDFActionPerformed) still show the yes/no question 'Aktion auf offene Dokumente ausführen' via getDocumentsOpenForWrite. 'Ablegen als PDF' (mnuDuplicateDocumentAsPdf) instead uses waitForOpenDocument/WaitForDocumentAction and waits until the document is closed",
+  "maintainer": "",
+  "notes": "Fix: run the send-as-PDF flow in a ProgressableActionCallback after waitForOpenDocument, chained when several documents are selected. Swing-only, but it reuses existing helpers and is easy to review. Same handler as #3610 (focus problem), do not mix the two in one PR.",
+  "user_visible": true,
+  "priority": 2,
+  "confidence": "med"
  },
  {
   "number": 1145,
@@ -1439,6 +2232,26 @@
   "confidence": "med"
  },
  {
+  "number": 314,
+  "title": "Mail: offer j-lawyer users as TO/CC/BCC recipients",
+  "kind": "enhancement",
+  "area": "e-mail",
+  "category": "D",
+  "fixed_commit": "",
+  "files": [
+   "j-lawyer-client/src/main/java/com/jdimension/jlawyer/client/mail/SendEmailFrame.java",
+   "j-lawyer-client/src/main/java/com/jdimension/jlawyer/client/mail/AddRecipientSearchDialog.java"
+  ],
+  "effort": "S",
+  "risk": "low",
+  "cause": "Feature. The recipient popups and AddRecipientSearchDialog only offer case parties and contacts, not j-lawyer users",
+  "maintainer": "Original spec (2019): offer only users with a configured mailbox and use that mailbox address as the recipient.",
+  "notes": "A small client-only change (user list + SecurityService.getMailboxesForUser or AppUserBean.email). But mailboxes are now shared and many-to-many with users, so which address to use needs a decision. Has the good first issue label.",
+  "user_visible": true,
+  "priority": 0,
+  "confidence": "med"
+ },
+ {
   "number": 299,
   "title": "Feiertage im Datumsauswahl-Kalender farblich absetzen",
   "kind": "enhancement",
@@ -1503,6 +2316,26 @@
   "confidence": "high"
  },
  {
+  "number": 238,
+  "title": "Configurable signature placement or omission in replies",
+  "kind": "enhancement",
+  "area": "e-mail",
+  "category": "D",
+  "fixed_commit": "",
+  "files": [
+   "j-lawyer-client/src/main/java/com/jdimension/jlawyer/client/mail/SendEmailFrame.java",
+   "j-lawyer-client/src/main/java/com/jdimension/jlawyer/client/mail/EmailActionHandler.java"
+  ],
+  "effort": "M",
+  "risk": "low",
+  "cause": "Feature. SendEmailFrame.setBody always puts the signature between the reply text and the quote (useSignature only toggles it per call). There is no user setting for position or omission",
+  "maintainer": "Should be configurable (2019).",
+  "notes": "Options proposed by Stimpi72: at the very end, between text and quote, or not at all. The 'Signatur einfügen' button (7b66cf378, 2026-09) now lets users insert it manually, which partly covers 'not at all'. Needs a decision on the setting's scope plus settings UI (.form).",
+  "user_visible": true,
+  "priority": 0,
+  "confidence": "high"
+ },
+ {
   "number": 235,
   "title": "Massenänderungen an Akten (z.B. Anwalt wechseln)",
   "kind": "enhancement",
@@ -1522,6 +2355,23 @@
   "user_visible": true,
   "priority": 0,
   "confidence": "high"
+ },
+ {
+  "number": 234,
+  "title": "Kostenvorblatt mit MwSt-Spalte",
+  "kind": "enhancement",
+  "area": "finance",
+  "category": "D",
+  "fixed_commit": "",
+  "files": [],
+  "effort": "S",
+  "risk": "low",
+  "cause": "The Kostenvorblatt is not part of this repository (no code, template or plugin references found), it appears to be a calculation plugin or template distributed separately via j-lawyer.org.",
+  "maintainer": "Opened by j-dimension in 2019 from a user request.",
+  "notes": "Cannot be implemented here. Likely superseded by the finance module (Belege show VAT per rate). Suggest asking j-dimension to close it or move it to the plugin repository.",
+  "user_visible": true,
+  "priority": 0,
+  "confidence": "low"
  },
  {
   "number": 212,
