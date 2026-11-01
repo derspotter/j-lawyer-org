@@ -1,7 +1,7 @@
 # Report #smtp-timeouts
 
 - Branch: `fix/smtp-timeouts` (fork derspotter/j-lawyer-org)
-- Commit: `ddafffc88e46d4428df4c3c2b3f9a532198c2f12`
+- Commit: `da8e9283a8866cbb52fe35a9c927d1aabb0afc4e`
 - Subject: fix(e-mail): Zeitlimits für SMTP-Verbindungen, damit der Versand bei einem nicht antwortenden Mailserver nicht endlos hängt. Refs #1881
 - Author: derspotter <jayjag@posteo.de>
 - Base: upstream/master `7b3b3dfa8`
@@ -11,13 +11,13 @@
 | File | + | - |
 |---|---|---|
 | `j-lawyer-client/src/main/java/com/jdimension/jlawyer/client/mail/SendAction.java` | 2 | 0 |
-| `j-lawyer-server-common/src/main/java/com/jdimension/jlawyer/email/CommonMailUtils.java` | 26 | 0 |
+| `j-lawyer-server-common/src/main/java/com/jdimension/jlawyer/email/CommonMailUtils.java` | 25 | 0 |
 | `j-lawyer-server-common/src/test/java/org/jlawyer/test/email/SmtpTimeoutsTest.java` | 685 | 0 |
 | `j-lawyer-server/j-lawyer-server-ejb/src/main/java/com/jdimension/jlawyer/services/EmailService.java` | 2 | 0 |
 | `j-lawyer-server/j-lawyer-server-ejb/src/main/java/com/jdimension/jlawyer/services/SystemManagement.java` | 3 | 0 |
 | `j-lawyer-server/j-lawyer-server-ejb/src/main/java/org/jlawyer/async/OutgoingMailProcessor.java` | 2 | 0 |
 | `j-lawyer-server/j-lawyer-server-war/src/main/java/com/jdimension/jlawyer/timer/SystemMonitorTask.java` | 2 | 0 |
-| total | 722 | 0 |
+| total | 721 | 0 |
 
 ## Build and tests vs. baseline
 
