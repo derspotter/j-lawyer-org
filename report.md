@@ -25,7 +25,7 @@ Befehl: `mvn -B -ntp -pl j-lawyer-client -am -Dmaven.test.failure.ignore=true -D
 ## Designentscheidungen
 - Einmalige Frage pro Vorgang statt dauerhafter Einstellung: das Issue wünscht eine Option, die "bei allen Dokumenten" gilt. Eine Einstellung bräuchte Settings-Key und UI, also mehr Diff. Kann nachgezogen werden, falls Jens das lieber hat.
 - Bei "Beibehalten" kein Namensschema, auch nicht beim Verschieben. "Neu benennen" lässt das alte Verhalten (Schema beim Verschieben) unverändert.
-- Namenskonflikt: `doesDocumentExist` (aktive Dokumente plus Papierkorb, case-insensitive) plus die schon vergebenen Namen des Vorgangs. Der Server prüft beim Anlegen exakt (`findByArchiveFileKey(aFile, fileName)`, auch Papierkorb) und wirft sonst mitten im Vorgang.
+- Namenskonflikt: `doesDocumentExist` (aktive Dokumente plus Papierkorb, case-insensitive) plus die schon vergebenen Namen des Vorgangs. Der Server prüft beim Anlegen per JPQL `name = ?2` (`findByArchiveFileKey(aFile, fileName)`, ohne Filter auf gelöscht, also inkl. Papierkorb). Ob dabei Groß-/Kleinschreibung zählt, hängt von der DB-Kollation ab. Bei einem Treffer wirft er mitten im Vorgang.
 
 ## Nicht verifiziert
 - Kein laufender Client oder Server, Dialogfolge nicht durchgeklickt.

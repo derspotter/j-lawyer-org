@@ -25,7 +25,7 @@ Die Wahl gilt für einen Vorgang. Eine dauerhafte Einstellung ist bewusst nicht 
 - Nicht im laufenden Client gegen einen Server ausprobiert. Der Dialog-Ablauf in `ArchiveFilePanel` ist nicht automatisch getestet, nur die Hilfsmethode.
 - Die neue Frage erscheint auch bei einem einzelnen Dokument. Mit "Beibehalten" bleibt es bei einem Klick, mit "Neu benennen" ist es ein Klick mehr als bisher.
 - Pro Dokument eine Serverabfrage `doesDocumentExist`. Bei sehr vielen Dokumenten in der Zielakte könnte das spürbar sein, gemessen ist es nicht.
-- Die Prüfung ist strenger als die des Servers (Groß-/Kleinschreibung egal). Im Zweifel wird also eher einmal zu viel nach einem Namen gefragt.
+- Die Prüfung ignoriert Groß-/Kleinschreibung. Der Server vergleicht beim Anlegen per Datenbankabfrage auf den Namen, ob Groß-/Kleinschreibung dort zählt, hängt von der Kollation der Datenbank ab. Im Zweifel wird also eher einmal zu viel nach einem Namen gefragt.
 
 Closes #3407
 
