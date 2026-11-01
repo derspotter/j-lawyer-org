@@ -20,7 +20,7 @@ Befehl: `mvn -B -ntp -pl j-lawyer-client -am -Dmaven.test.failure.ignore=true -D
 - Scratch-Layoutprüfung (`org.jdesktop.layout.GroupLayout`, Platzhalter-Komponenten, 800 px breit, headless): ohne Fix links 12 px, rechts 0 px. Mit Fix links und rechts 12 px, auch für die Reiter.
 
 ## Merge-Prüfung
-`git merge-tree --write-tree` gegen `origin/fix/1283-new-contact-after-tag-save` (fd36c46) und `origin/fix/3511-double-right-click` (PR #3693): beide Exit 0, keine Konflikte. Die anderen Branches ändern andere Stellen in AddressPanel.java (isContactSaved bei setAddressDTO bzw. Kontextmenü-Code), nicht initComponents.
+`git merge-tree --write-tree` gegen `origin/fix/1283-new-contact-after-tag-save` (fd36c46) und `origin/fix/3511-double-right-click` (PR #3693): beide Exit 0, keine Konflikte. Die anderen Branches ändern andere Stellen in AddressPanel.java (neue Methode isContactSaved vor setAddressDTO bzw. Doppelklick-Prüfung im Maus-Listener der Dokumentliste plus Import), nicht initComponents.
 
 ## Nicht verifiziert
 - Kein laufender Client, kein Windows mit 105 Prozent, kein NetBeans GUI Builder.
