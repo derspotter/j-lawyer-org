@@ -48,5 +48,6 @@ master failures not present: none
 - No GUI run, no unit test (logic inside the dialog's initialisation between server calls). The change only adds `toLowerCase()` to the file number side of two `contains()` checks, the other side is already lower case.
 
 ## Open questions
+- DUPLICATE: another lane pushed origin/fix/aktenvorschlag-grossschreibung (2927c0a4c, committed 2026-11-01 14:57 UTC, before this branch) with the same two `toLowerCase()` changes in `SearchAndAssignDialog`, only the comment differs. Post only one of the two PRs, the other branch can be dropped.
 - No issue of its own (found while triaging #3230).
 - The second check (`fbc.getFileNumber().contains(searchContext)`) tests whether the file number contains the whole context, which only matches for short contexts. Kept as is apart from the case fix.
