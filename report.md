@@ -1,8 +1,16 @@
 # Report #1283: Adressen - neu nach Speichern über den Etiketten-Reiter
 
 - Branch: `fix/1283-new-contact-after-tag-save` (Basis: upstream/master 7b3b3dfa8)
-- Commit: `fd36c464a65e11ea95c8379e6baf59357fb2c8a3`
-- Status: fertig, bereit für Codex-Review
+- Commit (Head): `fd36c464a65e11ea95c8379e6baf59357fb2c8a3`
+- Status: Code fertig. Offen: Autor auf derspotter umschreiben (Force-Push in der Cloud-Session abgelehnt), siehe Nachtrag.
+
+## Nachtrag 01.11.2026 (Codex-Review, Autor)
+- Autor auf `derspotter <jayjag@posteo.de>` umschreiben (amend + `git push --force-with-lease`): in der Cloud-Session vom Auto-Mode-Klassifikator als destruktive Git-Aktion abgelehnt. Nicht umgangen. Der Branch hat deshalb noch den Commit mit Autor Claude.
+- Code unverändert, Head weiterhin `fd36c46` (Autor Claude). Die Commit-Nachricht enthält keine Build-Aussage, braucht also keine Korrektur.
+- pr.md: `## Verifiziert` nennt jetzt den genauen Befehl inkl. `-Dmaven.test.failure.ignore=true` und Compiler-Overrides, das JDK-Setup und dass der Build nur wegen ignorierter Testfehler durchläuft (einzige fehlschlagende Klassen FtpTest/SftpTest/SmbTest wie auf master).
+
+### Für das Umschreiben (lokal im Orchestrator)
+Nur Autor ändern, Nachricht unverändert: `git commit --amend --no-edit --author="derspotter <jayjag@posteo.de>"` und `git push --force-with-lease`.
 
 ## Dateien
 - `j-lawyer-client/src/main/java/com/jdimension/jlawyer/client/editors/EditorsRegistry.java` +20 -1
@@ -30,4 +38,3 @@ JDK wie bei #2151 beschrieben (Ubuntu OpenJDK 17 plus OpenJFX 17.0.9 per jlink, 
 - Die Rückfrage "Daten vor dem Verlassen speichern?" erscheint auch, wenn seit dem Speichern nichts geändert wurde, weil `NewAddressPanel.isDirty()` nur auf nicht leere Felder prüft. Alternative wäre, ohne Rückfrage zurückzusetzen. Dann gingen aber Änderungen nach dem Etiketten-Speichern still verloren. Ich habe mich für die Rückfrage entschieden (gleiches Verhalten wie beim Modulwechsel).
 - Schließen des Dialogs (X) bricht hier ab, beim normalen Modulwechsel gilt X dagegen wie Nein. Bewusst vorsichtiger gewählt.
 - `NewArchiveFilePanel` hat vermutlich dasselbe Problem (`ArchiveFilePanel.confirmSave` zeigt die neu angelegte Akte im NewArchiveFilePanel). Nicht geändert, eigener Folge-PR möglich.
-- Commit-Autor ist die Git-Identität der Cloud-Session (Claude), mit Co-Authored-By-Zeile.
