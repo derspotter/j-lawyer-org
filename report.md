@@ -66,3 +66,4 @@ master failures not present: none
 ## Open questions
 - No write timeout (`mail.smtp.writetimeout`), it needs an extra thread per connection in JavaMail.
 - `Refs #1881` (mail client IPv6 / timeouts issue), it does not close it.
+- The first push imported `java.util.Properties` in `CommonMailUtils`, which collided textually with the import block of the other lane's origin/fix/1694-inline-anhaenge-ohne-namen. Amended (force-with-lease, own branch) to use the fully qualified `java.util.Properties` in the method signature, now merge-clean with fix/1694. Build and tests re-run on the amended commit with identical results.
