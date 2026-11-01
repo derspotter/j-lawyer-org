@@ -14,13 +14,15 @@ Der Server wertet sie als **Groovy**-Ausdruck aus; das Ergebnis muss ein Text se
 - **Kein `]`:** Ein Skript endet beim ersten `]`. Deshalb darf im Skript kein `]` vorkommen, auch
   nicht in Texten.
 - **Platzhalter ohne Klammern:** Platzhalter stehen im Skript **ohne** `{{ }}`, z.B. `MANDANT_NAME`.
-  - Vor der Auswertung ersetzt der Server jeden Namen durch `"Wert"`, also durch den Wert in
-    Anführungszeichen. Dabei wird auch innerhalb von Texten ersetzt.
-  - Deshalb darf ein Platzhaltername nie in einem Text in Anführungszeichen stehen. Er wird angehängt:
-    `"Sehr geehrte Frau " + MANDANT_NAME + ","`.
+  - Bei der Auswertung steht jeder Name für seinen Wert als Text.
+  - Ein Platzhaltername in einem Text in Anführungszeichen ergibt dort (außer in `${…}`) nicht den
+    Wert. Er wird angehängt: `"Sehr geehrte Frau " + MANDANT_NAME + ","`.
+- **Platzhalter mit Klammern** gehören nicht in Skripte, `validate` meldet sie. Steht `{{MANDANT_NAME}}`
+  doch in einem Text des Skripts, wird es erst in das Ergebnis eingesetzt, in Bedingungen und
+  Funktionen ergibt es nicht den Wert.
 - **Mehrzeilige Werte:** Werte aus mehrzeiligen Feldern (z.B. Notizen, mehrzeilige
-  Falldatenblatt-Felder) in doppelte Anführungszeichen-Paare setzen: `""MANDANT_NOTIZ""`. Daraus
-  wird ein Groovy-Text mit dreifachen Anführungszeichen.
+  Falldatenblatt-Felder) in doppelte Anführungszeichen-Paare setzen: `""MANDANT_NOTIZ""`. Ältere
+  Serverversionen brauchen das, neuere kommen auch mit dem Namen allein aus.
 - **Anführungszeichen:** Texte stehen in geraden Anführungszeichen `"…"`. Typografische „…“
   wandelt der Server um.
 - **Verketten:** Texte werden mit `+` verkettet. `\n` erzeugt einen Zeilenumbruch, `\t` einen Tabulator.
@@ -28,12 +30,13 @@ Der Server wertet sie als **Groovy**-Ausdruck aus; das Ergebnis muss ein Text se
 - **Leeres Ergebnis:** Liefert ein Skript, das allein in seinem Absatz steht, einen leeren Text, wird
   der ganze Absatz entfernt. So lassen sich optionale Absätze bauen.
 - **Fehler:** Bei einem Fehler erscheint im Dokument `SCRIPTFEHLER: …`. Typische Ursachen:
-  - unbekannter Platzhaltername (er wird nicht ersetzt und ist dann ein ungültiger Groovy-Name)
-  - Platzhaltername innerhalb eines Textes
+  - unbekannter Platzhaltername (er ist dann ein ungültiger Groovy-Name)
+  - Platzhalter mit Klammern außerhalb eines Textes
   - Klammern oder Anführungszeichen nicht geschlossen
   - falsche Anzahl Parameter
-- **Was `validate` prüft:** alle oben genannten Fehlerursachen und dass das Skript in einem Absatz
-  abgeschlossen ist.
+- **Was `validate` prüft:** unbekannte Platzhalternamen, Platzhalter mit Klammern im Skript,
+  Platzhalternamen innerhalb eines Textes, nicht geschlossene Klammern und Anführungszeichen, die
+  Anzahl der Parameter und dass das Skript in einem Absatz abgeschlossen ist.
 
 ## Funktionen
 

@@ -777,8 +777,8 @@ def check_script(script, cat, rep, where):
             for name in re.findall(r"[A-Z][A-Z0-9]*_[A-Z0-9_]+", literal):
                 if cat.known_script_name(name):
                     rep.error(where, f"Skript: der Platzhaltername {name} steht innerhalb eines Textes in "
-                                     f"Anführungszeichen - der Server ersetzt ihn dort durch \"Wert\" und das "
-                                     f"Skript bricht. Stattdessen verketten: \"…\" + {name} + \"…\"")
+                                     f"Anführungszeichen und ergibt dort (außer in ${{…}}) nicht den Wert. "
+                                     f"Stattdessen verketten: \"…\" + {name} + \"…\"")
             if stack:
                 stack[-1][2] = True
             last_sig = "v"
