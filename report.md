@@ -44,5 +44,5 @@ master failures not present: none
 - No GUI run. All four mutating handlers (add, edit, duplicate, remove) already end with `updateAccountTotals()`, the new call sits right after it. `loadAccountEntries()` is the only other place that set paid totals, its loop is replaced by the same helper.
 
 ## Open questions
-- Found while reading: `InvoiceEntryPanel.setPaidTotal()` compares `paid != BigDecimal.valueOf(Float.MIN_VALUE)` by reference, so the "keep current value" sentinel from `cmdOpenActionPerformed()` never matches and the row shows 0,00 paid after editing an invoice. Separate one-line fix, not included here (one topic per PR). Could be a follow-up.
+- Found while reading: `InvoiceEntryPanel.setPaidTotal()` compares `paid != BigDecimal.valueOf(Float.MIN_VALUE)` by reference, so the "keep current value" sentinel from `cmdOpenActionPerformed()` never matches and the row shows 0,00 paid after editing an invoice. Separate one-line fix, not included here (one topic per PR). Now on its own branch fix/belege-bezahlt-nach-bearbeiten (notes/belege-bezahlt-nach-bearbeiten).
 - `git merge-tree` with fix/2850 (InvoiceEntryPanel), fix/3371 and fix/2169 is clean. With both fix/2278 and fix/2850 merged, the paid value after the green check mark is computed twice (table and server), both give the booked amount.
