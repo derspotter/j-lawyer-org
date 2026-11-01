@@ -1,8 +1,29 @@
 # Report: FolderListCell.drop() ohne return nach rejectDrop()
 
 - Branch: `fix/folderlistcell-reject-drop` (Basis: upstream/master 7b3b3dfa8)
-- Commit: `6cf6849a1b311da2552c881e3f852d9902702f15`
-- Status: fertig, bereit für Codex-Review. Kein Issue.
+- Commit (Head): `6cf6849a1b311da2552c881e3f852d9902702f15`
+- Status: Code fertig, kein Issue. Offen: Autor und Commit-Nachricht umschreiben (Force-Push in der Cloud-Session abgelehnt), siehe Nachtrag.
+
+## Nachtrag 01.11.2026 (Codex-Review, Autor)
+- Autor auf `derspotter <jayjag@posteo.de>` umschreiben (amend + `git push --force-with-lease`): in der Cloud-Session vom Auto-Mode-Klassifikator als destruktive Git-Aktion abgelehnt. Nicht umgangen. Der Branch hat deshalb noch den Commit mit Autor Claude.
+- Code unverändert, Head weiterhin `6cf6849` (Autor Claude). Die Commit-Nachricht beschreibt noch den falschen Ablauf (zweite, unbehandelte Exception). Die Korrektur braucht ein amend und ist deshalb noch offen (Text siehe unten).
+- pr.md: `## Verifiziert` nennt jetzt den genauen Befehl inkl. `-Dmaven.test.failure.ignore=true` und Compiler-Overrides, das JDK-Setup und dass der Build nur wegen ignorierter Testfehler durchläuft (einzige fehlschlagende Klassen FtpTest/SftpTest/SmbTest wie auf master). pr.md: Ursache und Fix nach dem Review neu beschrieben, siehe Abschnitt "Korrektur der Analyse".
+
+### Für das Umschreiben (lokal im Orchestrator)
+Autor derspotter, Nachricht:
+
+```
+fix(documents): Ablegen auf schreibgeschützten Ordner bzw. ohne Akte sauber abweisen.
+
+FolderListCell.drop() rief für einen schreibgeschützten Ordner oder
+ohne geladene Akte dtde.rejectDrop() auf, arbeitete danach aber weiter.
+rejectDrop() setzt den DropTargetContext zurück, das folgende
+getTransferable() wirft eine InvalidDnDOperationException, die der
+catch-Block protokolliert. Nach dem Abweisen wird jetzt direkt
+zurückgekehrt, das vermeidet die protokollierte Exception.
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+```
 
 ## Dateien
 - `j-lawyer-client/src/main/java/com/jdimension/jlawyer/ui/folders/FolderListCell.java` +2 -0
@@ -17,14 +38,17 @@ Befehl: `mvn -B -ntp -pl j-lawyer-client -am -Dmaven.test.failure.ignore=true -D
 
 JDK wie bei #2151 beschrieben (Ubuntu OpenJDK 17 plus OpenJFX 17.0.9 per jlink, `--release` durch source/target 17 ersetzt).
 
-## Abweichung von der Aufgabenbeschreibung
-Die Aufgabe sagt, die Dokumente würden trotz rejectDrop() verschoben. Mit den JDK-Peers stimmt das so nicht: `javap -c` auf JDK 17 zeigt, dass `DropTargetContext.acceptDrop` an den Peer delegiert und `SunDropTargetContextPeer.acceptDrop` bei dropStatus != WAIT/ACCEPT eine `InvalidDnDOperationException("invalid acceptDrop()")` wirft. `rejectDrop` setzt den Status auf REJECT. `XDropTargetContextPeer` (Linux) überschreibt beide Methoden nicht. Damit bricht der Ablauf vor `moveDocumentsToFolder()` ab. Tatsächliche Folge: Fehler im Log (catch-Block), zweiter `rejectDrop()` wirft unbehandelt aus `drop()` heraus. pr.md beschreibt das so und erwähnt das Verschieben nur als Folge bei einem nachsichtigeren Peer. Der Fix ist derselbe.
+## Korrektur der Analyse
+Meine erste Beschreibung war falsch. Ich hatte `getTransferable()` und das Zurücksetzen des Contexts übersehen. Der Review hatte recht, per `javap -c` auf JDK 17 nachgeprüft:
+- `DropTargetContext.rejectDrop()` ruft `peer.rejectDrop()`, das setzt dropStatus auf REJECT und ruft `dropComplete(false)`.
+- `SunDropTargetContextPeer.dropComplete` setzt über `AWTAccessor...reset(currentDTC)` den Context zurück: `DropTargetContext.reset()` setzt `dropTargetContextPeer` und `transferable` auf null. dropStatus wird NONE.
+- `DropTargetContext.getTransferable()` wirft bei Peer null `new InvalidDnDOperationException()`. Das passiert im try-Block vor `isDataFlavorSupported`/`acceptDrop`, der catch-Block protokolliert es.
+- `DropTargetContext.rejectDrop()` tut bei Peer null nichts. Der zweite Check und der rejectDrop() im catch-Block sind also No-ops.
+Folge vor dem Fix: genau eine protokollierte Exception pro abgewiesenem Drop, nichts wird verschoben oder hochgeladen, nichts verlässt `drop()`. Ein Umgehen des Schreibschutzes gibt es nicht. Die Aufgabenbeschreibung ("verschiebt trotzdem") trifft damit nicht zu, der Fix bleibt derselbe.
 
 ## Nicht verifiziert
 - Kein automatischer Test möglich: `new DropTarget(...)` im Konstruktor von FolderListCell und jeder `DropTargetContext` werfen headless `HeadlessException`. Kein Mockito im Client. Eine Robot-Prüfung unter Xvfb wäre aufwendig und wackelig.
 - Windows-/macOS-Peers (WDropTargetContextPeer, CDropTargetContextPeer) nicht im Linux-JDK enthalten, also nicht nachgeprüft.
-- Wie der j-lawyer-Client eine unbehandelte Exception im EDT anzeigt (nur Log oder Dialog), nicht geprüft.
 
 ## Offene Fragen
 - Soll `dragEnter/dragOver` bei schreibgeschützten Ordnern gleich `rejectDrag()` aufrufen, damit der Mauszeiger schon beim Ziehen "nicht erlaubt" zeigt? Bewusst nicht Teil dieses Fixes.
-- Commit-Autor ist die Git-Identität der Cloud-Session (Claude), mit Co-Authored-By-Zeile.
