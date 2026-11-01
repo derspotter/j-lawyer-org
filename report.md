@@ -1,8 +1,16 @@
 # Report #3165: MultiCalDialog fragt bei Alt+Tab nach Wochenende/Feiertag
 
 - Branch: `fix/3165-datepicker-alt-tab` (Basis: upstream/master 7b3b3dfa8)
-- Commit: `c9427b9b95376f4f5e25c194f53f0c9d300a9213`
-- Status: fertig, bereit für Codex-Review
+- Commit (Head): `c9427b9b95376f4f5e25c194f53f0c9d300a9213`
+- Status: Code fertig. Offen: Autor auf derspotter umschreiben (Force-Push in der Cloud-Session abgelehnt), siehe Nachtrag.
+
+## Nachtrag 01.11.2026 (Codex-Review, Autor)
+- Autor auf `derspotter <jayjag@posteo.de>` umschreiben (amend + `git push --force-with-lease`): in der Cloud-Session vom Auto-Mode-Klassifikator als destruktive Git-Aktion abgelehnt. Nicht umgangen. Der Branch hat deshalb noch den Commit mit Autor Claude.
+- Code unverändert, Head weiterhin `c9427b9` (Autor Claude). Die Commit-Nachricht enthält keine Build-Aussage, braucht also keine Korrektur.
+- pr.md: `## Verifiziert` nennt jetzt den genauen Befehl inkl. `-Dmaven.test.failure.ignore=true` und Compiler-Overrides, das JDK-Setup und dass der Build nur wegen ignorierter Testfehler durchläuft (einzige fehlschlagende Klassen FtpTest/SftpTest/SmbTest wie auf master).
+
+### Für das Umschreiben (lokal im Orchestrator)
+Nur Autor ändern, Nachricht unverändert: `git commit --amend --no-edit --author="derspotter <jayjag@posteo.de>"` und `git push --force-with-lease`.
 
 ## Dateien
 - `j-lawyer-client/src/main/java/com/jdimension/jlawyer/client/components/MultiCalDialog.java` +32 -0
@@ -28,4 +36,3 @@ JDK wie bei #2151 beschrieben (Ubuntu OpenJDK 17 plus OpenJFX 17.0.9 per jlink, 
 ## Offene Fragen
 - Whitelist statt Blacklist: Ich lasse nur Pfeiltasten, Enter und Leertaste als Auswahl zu. Damit wählen Escape, Buchstaben usw. nicht mehr heimlich heute. Engere Alternative wäre, nur Modifier-Tasten (Alt, AltGr, Ctrl, Shift, Meta, Windows) zu ignorieren. Die Whitelist ist robuster, ändert aber etwas mehr Verhalten.
 - Enter bleibt erlaubt, weil es bisher den markierten Tag gewählt hat und jemand das nutzen könnte (Dialog öffnen, Enter = heute).
-- Commit-Autor ist die Git-Identität der Cloud-Session (Claude), mit Co-Authored-By-Zeile.

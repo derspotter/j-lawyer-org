@@ -15,7 +15,9 @@ Keine Änderung an der `.form`-Datei, nur Code außerhalb der generierten Bereic
 
 ## Verifiziert
 - Neuer `MultiCalDialogTest` mit 4 Tests: ein echter `JDayChooser` feuert bei `keyPressed(VK_ALT)` ein `day`-Event (die Ursache), Alt/Meta/Tab/Escape/Shift gelten nicht als Auswahl, Pfeiltasten/Enter/Leertaste weiterhin schon, ein Mausklick und `null` (kein Event in Verarbeitung) ebenfalls.
-- `mvn -pl j-lawyer-client -am clean package` mit Tests: BUILD SUCCESS. Es scheitern nur FtpTest, SftpTest und SmbTest wie auf master (brauchen externe Zugangsdaten).
+- Build: `mvn -B -ntp -pl j-lawyer-client -am -Dmaven.test.failure.ignore=true -Dmaven.compiler.release= -Dmaven.compiler.source=17 -Dmaven.compiler.target=17 clean package`
+- JDK: Ubuntu OpenJDK 17.0.20 und OpenJFX 17.0.9 aus Maven Central, per jlink zu einem JDK zusammengefügt, weil die BellSoft-Hosts im Cloud-Proxy gesperrt waren. Mit diesem JDK sieht `--release 17` die JavaFX-Module nicht, deshalb `source`/`target` 17 statt `release`.
+- Ergebnis: Der Build läuft durch, weil Testfehler mit `-Dmaven.test.failure.ignore=true` ignoriert werden. Fehlschlagende Testklassen sind nur FtpTest, SftpTest und SmbTest in j-lawyer-server-common (sie brauchen FTP-, SFTP- und SMB-Server), genau wie auf master. Client: 85 Tests, 0 Fehler (master: 81).
 
 ## Nicht abgedeckt
 - Nicht im laufenden Client mit echtem Alt+Tab ausprobiert (keine Desktop-Umgebung). Dass beim Fensterwechsel genau das Alt-Event (bzw. Cmd unter macOS) beim Tages-Button ankommt, ist aus dem Verhalten im Issue und dem Code von `JDayChooser` abgeleitet, nicht unter Windows, macOS oder Linux live beobachtet.
