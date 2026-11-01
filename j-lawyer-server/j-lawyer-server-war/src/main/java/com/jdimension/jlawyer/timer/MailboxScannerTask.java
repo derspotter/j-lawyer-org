@@ -1092,6 +1092,11 @@ public class MailboxScannerTask extends java.util.TimerTask {
             Properties props = new Properties();
             props.setProperty("mail.imap.partialfetch", "false");
             props.setProperty("mail.imaps.partialfetch", "false");
+            // same timeouts as in EmailService - without them, a mail server that stops responding blocks the scanner timer for good
+            props.setProperty("mail.imap.connectiontimeout", "15000");
+            props.setProperty("mail.imaps.connectiontimeout", "15000");
+            props.setProperty("mail.imap.timeout", "30000");
+            props.setProperty("mail.imaps.timeout", "30000");
             props.setProperty("mail.store.protocol", ms.getEmailInType());
 
             if (ms.isEmailInSsl()) {
