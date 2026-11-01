@@ -32,3 +32,11 @@ Snapshot 2026-10-30. Source: the orchestrator's PR ledger.
 ## Assigned to cloud fix lanes (30.10.)
 - Cloud lane 1: #2151, #1283, #3165, #2544, FolderListCell.drop() bug (no issue)
 - Cloud lane 2: #2658, #1705
+
+## Assigned 01.11. (do not start these elsewhere)
+- Local beA lane: #3424, #3230
+- Local documents lane: #1875
+- Local e-mail lane: #1694, #1205
+- Cloud lane 1 (after its corrections): #2111, #3407
+- Cloud triage session, now a fix lane: #3371, #2850, #2278, #2169, #2203, #3507, #3410, #2460, #1779, #2592, #2658, #1705
+- Posted since 30.10.: #3611 (#3718), #3372 (#3719), #3617 (#3720), #3593 (#3721), #2487 (#3722), #2102 (#3723), #2127 (#3724), #3609 (#3725), #2265 (#3726), #1746 (#3727)
