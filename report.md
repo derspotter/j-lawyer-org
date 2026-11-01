@@ -49,5 +49,5 @@ master failures not present: none
 
 ## Open questions
 - Only `utf8mb4_0900_ai_ci` is mapped, exactly as in j-dimension's issue text. Other `utf8mb4_0900_*` collations would only appear if set explicitly.
-- Found while testing: `mysql` exits 0 when statements inside `source` fail, so a broken restore is reported as success. Not changed here (separate topic). Could be addressed with `--abort-source-on-error` (MySQL/MariaDB client option), needs a decision.
+- Found while testing: `mysql` exits 0 when statements inside `source` fail, so a broken restore is reported as success. Not changed here (separate topic). Could be addressed with `--abort-source-on-error` (verified in the MariaDB 10.11 client here, support in the MySQL 8 client not checked), needs a decision.
 - New files carry the full AGPL header like the other recent files, hence the large +lines count.
