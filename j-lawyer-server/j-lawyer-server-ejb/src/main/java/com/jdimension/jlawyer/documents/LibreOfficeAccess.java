@@ -1496,6 +1496,14 @@ public class LibreOfficeAccess {
             ArrayList<Node> removalParents = new ArrayList<>();
             ArrayList<Node> removalChildren = new ArrayList<>();
 
+            // mark the scripts of the template before any value is inserted, see newScriptStart and markScript
+            String scriptStart = newScriptStart();
+            TextNavigation scriptSearch = new TextNavigation(SCRIPT_REGEX, outputOdt);
+            while (scriptSearch.hasNext()) {
+                TextSelection item = (TextSelection) scriptSearch.nextSelection();
+                item.replaceWith(markScript(item.getText(), scriptStart));
+            }
+
             for (String key : values.keySet()) {
                 if (values.get(key) == null) {
                     values.put(key, "");
@@ -2039,8 +2047,7 @@ public class LibreOfficeAccess {
             // replace script placeholders
             ArrayList<Node> removalNodes = new ArrayList<>();
             ArrayList<String> removalNodesItemText = new ArrayList<>();
-            String scriptRegExKey = "\\[\\[SCRIPT:[^\\]]*\\]\\]";
-            TextNavigation search = new TextNavigation(scriptRegExKey, outputOdt);
+            TextNavigation search = new TextNavigation(markedScriptRegex(scriptStart), outputOdt);
             while (search.hasNext()) {
                 TextSelection item = (TextSelection) search.nextSelection();
                 String scriptContent = item.getText();
@@ -2479,40 +2486,76 @@ public class LibreOfficeAccess {
 
     }
 
+    static final String SCRIPT_REGEX = "\\[\\[SCRIPT:[^\\]]*\\]\\]";
+    private static final java.util.regex.Pattern PLACEHOLDER_IN_SCRIPT = java.util.regex.Pattern.compile("\\{\\{([^{}]+)\\}\\}");
+    // stands for a placeholder with braces in a marked script - private use characters, plain text in any
+    // string or comment and no valid script code
+    private static final char SCRIPT_PLACEHOLDER_START = '\uE000';
+    private static final char SCRIPT_PLACEHOLDER_END = '\uE001';
+    private static final java.util.regex.Pattern MARKED_SCRIPT_START = java.util.regex.Pattern.compile("^\\[\\[SCRIPT-([0-9a-f]+):");
+    private static final java.util.regex.Pattern DOUBLE_QUOTED_NAME = java.util.regex.Pattern.compile("\"\"([A-Za-z_][A-Za-z0-9_]*)\"\"");
+
+    /**
+     * Returns the start of the scripts of a template in one document creation, with a random part no
+     * placeholder value can know. Only scripts marked with it before the placeholders are replaced are
+     * evaluated, so a value can neither add a script nor change one.
+     */
+    static String newScriptStart() {
+        return "[[SCRIPT-" + java.util.UUID.randomUUID().toString().replace("-", "") + ":";
+    }
+
+    static String markedScriptRegex(String scriptStart) {
+        return java.util.regex.Pattern.quote(scriptStart) + "[^\\]]*\\]\\]";
+    }
+
+    /**
+     * Marks a script of the template (found with SCRIPT_REGEX) for evaluation. Its placeholders with braces
+     * ({{MANDANT_NAME}}) become marks (SCRIPT_PLACEHOLDER_START, the random part of scriptStart, the name,
+     * SCRIPT_PLACEHOLDER_END), which evaluateScript replaces in the result.
+     */
+    static String markScript(String script, String scriptStart) {
+        String random = scriptStart.substring("[[SCRIPT-".length(), scriptStart.length() - 1);
+        java.util.regex.Matcher m = PLACEHOLDER_IN_SCRIPT.matcher(script.substring("[[SCRIPT:".length()));
+        StringBuilder marked = new StringBuilder(scriptStart);
+        while (m.find()) {
+            m.appendReplacement(marked, java.util.regex.Matcher.quoteReplacement(SCRIPT_PLACEHOLDER_START + random + ":" + m.group(1) + SCRIPT_PLACEHOLDER_END));
+        }
+        m.appendTail(marked);
+        return marked.toString();
+    }
+
     protected static String evaluateScript(String caseId, String scriptContent, HashMap<String, Object> values, ArrayList<String> formsPrefixes) {
-        if (scriptContent.startsWith("[[SCRIPT:")) {
-            scriptContent = scriptContent.substring(9);
+        // marks of the placeholders with braces in a marked script, see markScript - values cannot know them
+        java.util.regex.Matcher markedStart = MARKED_SCRIPT_START.matcher(scriptContent);
+        java.util.regex.Pattern scriptPlaceHolder = markedStart.find() ? java.util.regex.Pattern.compile(java.util.regex.Pattern.quote(SCRIPT_PLACEHOLDER_START + markedStart.group(1) + ":") + "([^" + SCRIPT_PLACEHOLDER_START + SCRIPT_PLACEHOLDER_END + "]*)" + SCRIPT_PLACEHOLDER_END) : null;
+        if (scriptContent.startsWith("[[SCRIPT") && scriptContent.indexOf(':') > 0) {
+            scriptContent = scriptContent.substring(scriptContent.indexOf(':') + 1);
         }
         if (scriptContent.endsWith("]]")) {
             scriptContent = scriptContent.substring(0, scriptContent.length() - 2);
         }
         scriptContent = scriptContent.trim();
 
-        Set<String> valueKeys = values.keySet();
-
-        // need to sort by key length descending
-        // e.g. to prevent MANDANT_ORT from replacing the value for MANDANT_ORTSTEIL
-        List<String> lengthSortedValueKeys = new ArrayList<>(valueKeys);
-        Collections.sort(lengthSortedValueKeys, (Object arg0, Object arg1) -> {
-            if (arg0 == null) {
-                arg0 = "";
-            }
-            if (arg1 == null) {
-                arg1 = "";
-            }
-            return Integer.compare(arg1.toString().length(), arg0.toString().length());
-        });
-
-        for (String scriptPlaceHolderKey : lengthSortedValueKeys) {
-            if (scriptPlaceHolderKey.startsWith(PLACEHOLDER_OPEN) && scriptPlaceHolderKey.endsWith(PLACEHOLDER_CLOSE)) {
-                String scriptPlaceHolderValue = values.get(scriptPlaceHolderKey).toString();
-                scriptPlaceHolderKey = scriptPlaceHolderKey.substring(2);
-                scriptPlaceHolderKey = scriptPlaceHolderKey.substring(0, scriptPlaceHolderKey.length() - 2);
-                scriptContent = scriptContent.replaceAll(scriptPlaceHolderKey, "\"" + scriptPlaceHolderValue + "\"");
+        // placeholders without braces (MANDANT_NAME) are resolved by the script at runtime - inserting their
+        // values into the script code would let a value change the code
+        HashMap<String, String> placeHolderValues = new HashMap<>();
+        for (String scriptPlaceHolderKey : values.keySet()) {
+            if (scriptPlaceHolderKey.startsWith(PLACEHOLDER_OPEN) && scriptPlaceHolderKey.endsWith(PLACEHOLDER_CLOSE) && values.get(scriptPlaceHolderKey) != null) {
+                placeHolderValues.put(scriptPlaceHolderKey.substring(2, scriptPlaceHolderKey.length() - 2), values.get(scriptPlaceHolderKey).toString());
             }
         }
         scriptContent = scriptContent.replace("„", "\"");
         scriptContent = scriptContent.replace("“", "\"");
+        // ""MANDANT_NOTIZ"" used to become a triple quoted string for values with line breaks - the name alone
+        // does the same now
+        java.util.regex.Matcher doubleQuoted = DOUBLE_QUOTED_NAME.matcher(scriptContent);
+        StringBuilder unquoted = new StringBuilder();
+        while (doubleQuoted.find()) {
+            String name = doubleQuoted.group(1);
+            doubleQuoted.appendReplacement(unquoted, java.util.regex.Matcher.quoteReplacement(placeHolderValues.containsKey(name) ? name : doubleQuoted.group()));
+        }
+        doubleQuoted.appendTail(unquoted);
+        scriptContent = unquoted.toString();
 
         // required for "WENNVORHANDEN"
         // scriptContent = scriptContent.replace("\"\"", "\"");
@@ -2526,7 +2569,7 @@ public class LibreOfficeAccess {
             }
 
             String myclass = sb.toString();
-            myclass = myclass.replace("SMARTTEMPLATESCRIPT", scriptContent);
+            // the script last, so its text is not changed by the other replacements
             myclass = myclass.replace("SMARTTEMPLATECASEID", caseId);
 
             StringBuilder allFormPrefixes = new StringBuilder();
@@ -2536,11 +2579,28 @@ public class LibreOfficeAccess {
                 }
             }
             myclass = myclass.replace("ALLFORMPREFIXES", allFormPrefixes.toString());
+            myclass = myclass.replace("SMARTTEMPLATESCRIPT", scriptContent);
 
             GroovyClassLoader gcl = new GroovyClassLoader();
             Class calcClass = gcl.parseClass(myclass);
             GroovyObject calc = (GroovyObject) calcClass.newInstance();
-            return (String) calc.invokeMethod("evaluateScript", new Object[]{});
+            calc.setProperty("placeHolderValues", placeHolderValues);
+            String result = (String) calc.invokeMethod("evaluateScript", new Object[]{});
+            if (result == null) {
+                return null;
+            }
+            if (scriptPlaceHolder == null) {
+                return result;
+            }
+            // placeholders with braces get their values in the result, as text
+            java.util.regex.Matcher marks = scriptPlaceHolder.matcher(result);
+            StringBuilder withValues = new StringBuilder();
+            while (marks.find()) {
+                Object value = values.get(PLACEHOLDER_OPEN + marks.group(1) + PLACEHOLDER_CLOSE);
+                marks.appendReplacement(withValues, java.util.regex.Matcher.quoteReplacement(value instanceof String ? (String) value : PLACEHOLDER_OPEN + marks.group(1) + PLACEHOLDER_CLOSE));
+            }
+            marks.appendTail(withValues);
+            return withValues.toString();
         } catch (Throwable t) {
             log.error("Unable to evaluate smart template script", t);
             log.error("****************************************");

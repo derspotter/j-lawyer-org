@@ -805,6 +805,74 @@ public class MicrosoftOfficeDocxTest {
         }
     }
 
+    /**
+     * Placeholder values in scripts are data, never script code (#1875), DOCX counterpart of
+     * LibreOfficeODFTest.setScriptPlaceHolderValuesWithSpecialCharactersInOdt, plus a script in a text box,
+     * scripts searchText cannot locate (with a tab, in two texts of one run) and a text box in a table, whose
+     * scripts are not evaluated.
+     */
+    @Test
+    public void setScriptPlaceHolderValuesWithSpecialCharactersInDocx() {
+        File f = new File(tempFolder.getRoot(), "script-values.docx");
+        try {
+            try (org.apache.poi.xwpf.usermodel.XWPFDocument document = new org.apache.poi.xwpf.usermodel.XWPFDocument();
+                    FileOutputStream out = new FileOutputStream(f)) {
+                for (String script : LibreOfficeODFTest.scriptsWithPlaceHolders()) {
+                    document.createParagraph().createRun().setText(script);
+                }
+                document.createParagraph().createRun().getCTR().set(textboxRun("[[SCRIPT:\"Textfeld: {{GEGNER_UNTERNEHMEN}}\"]]"));
+                document.createTable(1, 1).getRow(0).getCell(0).getParagraphs().get(0).createRun().getCTR().set(textboxRun("[[SCRIPT:\"Tabelle: {{GEGNER_UNTERNEHMEN}}\"]]"));
+                org.apache.poi.xwpf.usermodel.XWPFRun twoTexts = document.createParagraph().createRun();
+                twoTexts.setText("[[SCRIPT:\"Zwei: ");
+                twoTexts.getCTR().addNewT().setStringValue("{{GEGNER_VORNAME}}\"]]");
+                org.apache.poi.xwpf.usermodel.XWPFParagraph withTab = document.createParagraph();
+                withTab.createRun().setText("[[SCRIPT:\"Tab:");
+                withTab.createRun().addTab();
+                withTab.createRun().setText("{{GEGNER_VORNAME}}\"]]");
+                document.write(out);
+            }
+
+            LibreOfficeAccess.setPlaceHolders("", f.getPath(), f.getPath(), LibreOfficeODFTest.scriptPlaceHolderValues(), null);
+
+            StringBuilder text = new StringBuilder();
+            try (FileInputStream in = new FileInputStream(f);
+                    org.apache.poi.xwpf.usermodel.XWPFDocument document = new org.apache.poi.xwpf.usermodel.XWPFDocument(in)) {
+                for (org.apache.poi.xwpf.usermodel.XWPFParagraph paragraph : document.getParagraphs()) {
+                    text.append(paragraph.getText()).append("\n");
+                }
+            }
+            LibreOfficeODFTest.assertScriptResults(text.toString());
+            Assert.assertTrue(text.toString(), text.toString().contains("Tab:\t\"+System.getProperty(\"user.home\")+\""));
+            Assert.assertTrue(text.toString(), text.toString().contains("\nZwei: \"+System.getProperty(\"user.home\")+\"\n"));
+
+            String documentXml;
+            try (java.util.zip.ZipFile zip = new java.util.zip.ZipFile(f);
+                    InputStream is = zip.getInputStream(zip.getEntry("word/document.xml"))) {
+                documentXml = new String(is.readAllBytes(), java.nio.charset.StandardCharsets.UTF_8);
+            }
+            java.util.regex.Matcher textboxContent = java.util.regex.Pattern.compile("(?s)<w:txbxContent[^>]*>(.*?)</w:txbxContent>").matcher(documentXml);
+            Assert.assertTrue(documentXml, textboxContent.find());
+            String textboxText = textboxContent.group(1).replaceAll("<[^>]+>", "").replace("&quot;", "\"");
+            Assert.assertEquals("Textfeld: Dani Müller, handelnd unter \"Angelshop am Park\"", textboxText);
+            Assert.assertFalse(documentXml, documentXml.contains("[[SCRIPT-"));
+        } catch (Throwable t) {
+            t.printStackTrace();
+            Assert.fail(t.getMessage());
+        }
+    }
+
+    /**
+     * A run holding a text box (VML) with one paragraph of the given text.
+     */
+    private static org.openxmlformats.schemas.wordprocessingml.x2006.main.CTR textboxRun(String text) throws Exception {
+        String run = "<w:r xmlns:w=\"http://schemas.openxmlformats.org/wordprocessingml/2006/main\" xmlns:v=\"urn:schemas-microsoft-com:vml\">"
+                + "<w:pict><v:shape style=\"width:157pt;height:79pt\"><v:textbox><w:txbxContent>"
+                + "<w:p><w:r><w:t xml:space=\"preserve\">" + text.replace("&", "&amp;").replace("<", "&lt;") + "</w:t></w:r></w:p>"
+                + "</w:txbxContent></v:textbox></v:shape></w:pict></w:r>";
+        // the content of the parsed w:r, not the w:r itself
+        return org.openxmlformats.schemas.wordprocessingml.x2006.main.CTR.Factory.parse(run, new org.apache.xmlbeans.XmlOptions().setLoadReplaceDocumentElement(null));
+    }
+
     @Test
     public void setPlaceHoldersDOCX() {
         File f = new File(tempFolder.getRoot(), "template-run.docx");

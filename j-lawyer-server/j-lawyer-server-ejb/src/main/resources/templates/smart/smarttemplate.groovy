@@ -3,7 +3,18 @@ import templates.smart.SmartFunctions;
 class SmartTemplate {
     
     String caseId="SMARTTEMPLATECASEID";
-	
+
+    // values of the placeholders the script uses without braces (e.g. MANDANT_NAME), set by LibreOfficeAccess -
+    // they are looked up at runtime instead of being inserted into the script code
+    Map<String, String> placeHolderValues = [:]
+
+    def propertyMissing(String name) {
+        if (placeHolderValues.containsKey(name)) {
+            return placeHolderValues.get(name)
+        }
+        throw new MissingPropertyException(name, SmartTemplate)
+    }
+
     double doIt(double d1) {
         System.out.println("ok");
         return 42d-d1;

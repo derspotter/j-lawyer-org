@@ -729,6 +729,17 @@ public class MicrosoftOfficeAccess {
             FileInputStream fileIn = new FileInputStream(fileInFileSystem);
             outputDocx = new XWPFDocument(fileIn);
 
+            // mark the scripts of the template before any value is inserted, see LibreOfficeAccess.newScriptStart
+            String scriptStart = LibreOfficeAccess.newScriptStart();
+            Pattern templateScriptPattern = Pattern.compile(LibreOfficeAccess.SCRIPT_REGEX);
+            for (XWPFHeader header : outputDocx.getHeaderList()) {
+                markScripts(templateScriptPattern, scriptStart, header.getBodyElements());
+            }
+            markScripts(templateScriptPattern, scriptStart, outputDocx.getBodyElements());
+            for (XWPFFooter footer : outputDocx.getFooterList()) {
+                markScripts(templateScriptPattern, scriptStart, footer.getBodyElements());
+            }
+
             for (String key : values.keySet()) {
                 if (values.get(key) == null) {
                     values.put(key, "");
@@ -1077,9 +1088,8 @@ public class MicrosoftOfficeAccess {
             }
 
             // look for scripts
-            String scriptRegExKey = "\\[\\[SCRIPT:[^\\]]*\\]\\]";
             ArrayList<XWPFParagraph> removeParagraphs=new ArrayList<>();
-            Pattern pattern = Pattern.compile(scriptRegExKey);
+            Pattern pattern = Pattern.compile(LibreOfficeAccess.markedScriptRegex(scriptStart));
             // header
             for (XWPFHeader header : outputDocx.getHeaderList()) {
                 replaceScriptsInBodyElements(caseId, pattern, values, formsPrefixes, header.getBodyElements(), removeParagraphs);
@@ -1721,6 +1731,86 @@ public class MicrosoftOfficeAccess {
             }
         }
 
+    }
+
+    /**
+     * Marks the scripts of the template for evaluation, see LibreOfficeAccess.markScript, where
+     * replaceScriptsInBodyElements evaluates them: paragraphs and their text boxes, and paragraphs in tables.
+     */
+    private static void markScripts(Pattern pattern, String scriptStart, List<IBodyElement> bodyElements) {
+        for (IBodyElement bodyElement : bodyElements) {
+            if (bodyElement.getElementType().compareTo(BodyElementType.PARAGRAPH) == 0) {
+                markScriptsInParagraph(pattern, scriptStart, (XWPFParagraph) bodyElement);
+                markScriptsInTextfield(pattern, scriptStart, (XWPFParagraph) bodyElement);
+            } else if (bodyElement.getElementType().compareTo(BodyElementType.TABLE) == 0) {
+                markScriptsInTable(pattern, scriptStart, (XWPFTable) bodyElement);
+            }
+        }
+    }
+
+    private static void markScriptsInTable(Pattern pattern, String scriptStart, XWPFTable table) {
+        for (XWPFTableRow row : table.getRows()) {
+            for (XWPFTableCell cell : row.getTableCells()) {
+                for (IBodyElement bodyElement : cell.getBodyElements()) {
+                    if (bodyElement.getElementType().compareTo(BodyElementType.PARAGRAPH) == 0) {
+                        markScriptsInParagraph(pattern, scriptStart, (XWPFParagraph) bodyElement);
+                    }
+                    if (bodyElement.getElementType().compareTo(BodyElementType.TABLE) == 0) {
+                        markScriptsInTable(pattern, scriptStart, (XWPFTable) bodyElement);
+                    }
+                }
+            }
+        }
+    }
+
+    /**
+     * Scripts are found like in replaceScriptsInParagraph, including its fallback for scripts searchText
+     * cannot locate.
+     */
+    private static void markScriptsInParagraph(Pattern pattern, String scriptStart, XWPFParagraph paragraph) {
+        stripLastRenderedPageBreaks(paragraph);
+        Matcher m = pattern.matcher(paragraph.getText());
+        List<String> scripts = new ArrayList<>();
+        while (m.find()) {
+            scripts.add(m.group());
+        }
+        for (String script : scripts) {
+            String markedScript = LibreOfficeAccess.markScript(script, scriptStart);
+            replaceInParagraph(script, markedScript, paragraph);
+            if (paragraph.getText().contains(script)) {
+                // as in replaceScriptsInParagraph: put the paragraph text into its first run - and drop further
+                // texts of a run, setText replaces the first one only
+                String newParagraphText = paragraph.getText().replace(script, markedScript);
+                List<XWPFRun> runs = paragraph.getRuns();
+                for (int runPos = 0; runPos < runs.size(); runPos++) {
+                    CTR ctr = runs.get(runPos).getCTR();
+                    while (ctr.sizeOfTArray() > 1) {
+                        ctr.removeT(1);
+                    }
+                    runs.get(runPos).setText(runPos == 0 ? newParagraphText : "", 0);
+                }
+            }
+        }
+    }
+
+    /**
+     * Text boxes, run by run like in replaceScriptsInTextfield.
+     */
+    private static void markScriptsInTextfield(Pattern pattern, String scriptStart, XWPFParagraph paragraph) {
+        List<String> scripts = new ArrayList<>();
+        XmlCursor cursor = paragraph.getCTP().newCursor();
+        cursor.selectPath(CURSOR_TEXTFIELD);
+        while (cursor.hasNextSelection()) {
+            cursor.toNextSelection();
+            Matcher m = pattern.matcher(cursor.getTextValue());
+            while (m.find()) {
+                scripts.add(m.group());
+            }
+        }
+        cursor.dispose();
+        for (String script : scripts) {
+            replaceInTextfield(script, LibreOfficeAccess.markScript(script, scriptStart), paragraph);
+        }
     }
 
     static void mergeDocuments(String intoDocument, String mergeDocument) throws Exception {

@@ -1271,6 +1271,102 @@ public class LibreOfficeODFTest {
 
     }
 
+    /**
+     * Placeholder values in scripts are data, never script code (#1875): quotes, backslashes, dollar signs,
+     * brackets, braces and line breaks in a value neither break the script nor run as code, whether the
+     * script uses the placeholder without braces or with braces, in any string type, comment or as code. A
+     * value containing a script is not evaluated.
+     */
+    @Test
+    public void setScriptPlaceHolderValuesWithSpecialCharactersInOdt() {
+        File f = new File(tempFolder.getRoot(), "script-values.odt");
+        try {
+            TextDocument document = TextDocument.newTextDocument();
+            for (String script : scriptsWithPlaceHolders()) {
+                document.addParagraph(script);
+            }
+            document.save(f);
+            document.close();
+
+            LibreOfficeAccess.setPlaceHolders("", f.getPath(), f.getName(), scriptPlaceHolderValues(), null);
+
+            StringBuilder text = new StringBuilder();
+            TextDocument result = TextDocument.loadDocument(f);
+            java.util.Iterator<org.odftoolkit.simple.text.Paragraph> paragraphs = result.getParagraphIterator();
+            while (paragraphs.hasNext()) {
+                text.append(paragraphs.next().getTextContent()).append("\n");
+            }
+            result.close();
+            assertScriptResults(text.toString());
+        } catch (Throwable t) {
+            t.printStackTrace();
+            Assert.fail(t.getMessage());
+        }
+    }
+
+    static String[] scriptsWithPlaceHolders() {
+        return new String[]{
+            "[[SCRIPT:\"Vertreten durch \"+GEGNER_UNTERNEHMEN]]",
+            "[[SCRIPT:\"Name: {{GEGNER_NAME}}!\"]]",
+            "[[SCRIPT:'Einfach: {{GEGNER_NAME}}!']]",
+            "[[SCRIPT:WENNLEER(GEGNER_VORNAME, \"leer\", \"Vorname: \"+GEGNER_VORNAME)]]",
+            "[[SCRIPT:\"Klammern: {{GEGNER_VORNAME}}\"]]",
+            "[[SCRIPT:GEGNER_NAME.equals(\"\") ? \"\" : \"Vertretung \"+WENNLEER(GEGNER_UNTERNEHMEN, \"der\",\"von\")+\" {{GEGNER_UNTERNEHMEN}} übernommen.\"]]",
+            "[[SCRIPT:MANDANT_ORTSTEIL+\"/\"+MANDANT_ORT]]",
+            "[[SCRIPT:„Typografisch: “+GEGNER_UNTERNEHMEN]]",
+            "[[SCRIPT:\"Ort: \"+GEGNER_ORT+\" und {{GEGNER_ORT}}\"]]",
+            "[[SCRIPT:\"Notiz: \" + \"\"GEGNER_ORT\"\"]]",
+            "[[SCRIPT:„Notiz2: “ + „„GEGNER_ORT““]]",
+            "[[SCRIPT:/Slashy: {{GEGNER_STRASSE}}/]]",
+            "[[SCRIPT:\"Kommentar\" /* {{GEGNER_HAUSNR}} */]]",
+            "[[SCRIPT:\"PLZ: \"+GEGNER_PLZ]]",
+            "[[SCRIPT:\"Backslash: \\{{GEGNER_VORNAME}}\"]]",
+            "[[SCRIPT:{{GEGNER_ZUSATZ}}]]",
+            "[[SCRIPT:\"Interpolation: ${ {{GEGNER_ZUSATZ}} }\"]]",
+            "Skript im Wert: {{GEGNER_SKRIPT}}"
+        };
+    }
+
+    static HashMap<String, Object> scriptPlaceHolderValues() {
+        HashMap<String, Object> ph = new HashMap<>();
+        ph.put("{{GEGNER_UNTERNEHMEN}}", "Dani Müller, handelnd unter \"Angelshop am Park\"");
+        ph.put("{{GEGNER_NAME}}", "a\\b $c ${d} 'e' „f“ [g] {{MANDANT_ORT}}");
+        ph.put("{{GEGNER_VORNAME}}", "\"+System.getProperty(\"user.home\")+\"");
+        ph.put("{{GEGNER_ORT}}", "Zeile 1\nZeile 2");
+        ph.put("{{MANDANT_ORT}}", "Köln");
+        ph.put("{{MANDANT_ORTSTEIL}}", "Ehrenfeld");
+        ph.put("{{GEGNER_ZUSATZ}}", "System.getProperty(\"user.home\")");
+        ph.put("{{GEGNER_SKRIPT}}", "[[SCRIPT:System.getProperty(\"user.home\")]]");
+        ph.put("{{GEGNER_STRASSE}}", "/+System.getProperty(\"user.home\")+/x");
+        ph.put("{{GEGNER_HAUSNR}}", "*/+System.getProperty(\"user.home\")+/*");
+        // the characters of the marks for placeholders with braces in scripts
+        ph.put("{{GEGNER_PLZ}}", "\uE000GEGNER_ORT\uE001");
+        return ph;
+    }
+
+    static void assertScriptResults(String text) {
+        // no value ran as code - a placeholder with braces after a backslash, as code or in ${...} fails
+        Assert.assertFalse(text, text.contains(System.getProperty("user.home")));
+        Assert.assertEquals(text, 3, text.split("SCRIPTFEHLER", -1).length - 1);
+        Assert.assertFalse(text, text.contains("[[SCRIPT-"));
+        Assert.assertTrue(text, text.contains("Vertreten durch Dani Müller, handelnd unter \"Angelshop am Park\""));
+        Assert.assertTrue(text, text.contains("Name: a\\b $c ${d} 'e' „f“ [g] {{MANDANT_ORT}}!"));
+        Assert.assertTrue(text, text.contains("Einfach: a\\b $c ${d} 'e' „f“ [g] {{MANDANT_ORT}}!"));
+        Assert.assertTrue(text, text.contains("Vorname: \"+System.getProperty(\"user.home\")+\""));
+        Assert.assertTrue(text, text.contains("Klammern: \"+System.getProperty(\"user.home\")+\""));
+        Assert.assertTrue(text, text.contains("Vertretung von Dani Müller, handelnd unter \"Angelshop am Park\" übernommen."));
+        Assert.assertTrue(text, text.contains("Ehrenfeld/Köln"));
+        Assert.assertTrue(text, text.contains("Typografisch: Dani Müller, handelnd unter \"Angelshop am Park\""));
+        Assert.assertTrue(text, text.contains("Ort: Zeile 1"));
+        Assert.assertTrue(text, text.contains("Zeile 2 und Zeile 1"));
+        Assert.assertTrue(text, text.contains("Notiz: Zeile 1"));
+        Assert.assertTrue(text, text.contains("Notiz2: Zeile 1"));
+        Assert.assertTrue(text, text.contains("Slashy: /+System.getProperty(\"user.home\")+/x"));
+        Assert.assertTrue(text, text.contains("PLZ: \uE000GEGNER_ORT\uE001"));
+        Assert.assertTrue(text, text.contains("Kommentar"));
+        Assert.assertTrue(text, text.contains("Skript im Wert: [[SCRIPT:System.getProperty(\"user.home\")]]"));
+    }
+
     @Test
     public void setReplaceEmptyLine() {
         File f = new File(tempFolder.getRoot(), "template-emptyline-run.odt");
