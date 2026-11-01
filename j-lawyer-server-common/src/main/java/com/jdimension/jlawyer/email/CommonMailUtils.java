@@ -665,14 +665,18 @@ package com.jdimension.jlawyer.email;
 
 import com.sun.mail.imap.IMAPFolder;
 import java.io.ByteArrayOutputStream;
+import java.io.IOException;
 import java.io.InputStream;
 import java.io.StringReader;
 import java.io.UnsupportedEncodingException;
 import java.util.ArrayList;
+import java.util.Locale;
 import java.util.regex.Matcher;
+import java.util.zip.CRC32;
 import java.util.regex.Pattern;
 import javax.mail.Folder;
 import javax.mail.Message;
+import javax.mail.MessagingException;
 import javax.mail.Multipart;
 import javax.mail.Part;
 import javax.mail.Store;
@@ -1082,8 +1086,9 @@ public class CommonMailUtils {
                     } else if (part.getFileName() != null) {
                         attachmentInfos.add(new AttachmentInfo(decodeText(part.getFileName()), false));
                     } else {
-                        if (part.getContentType().toLowerCase().contains("message/rfc822")) {
-                            attachmentInfos.add(new AttachmentInfo("Nachricht_" + part.getSize() + ".eml", false));
+                        String generatedName = getGeneratedAttachmentName(part);
+                        if (generatedName != null) {
+                            attachmentInfos.add(new AttachmentInfo(generatedName, false));
                         }
                     }
                 } else if (Part.INLINE.equalsIgnoreCase(disposition)) {
@@ -1095,9 +1100,19 @@ public class CommonMailUtils {
                             attachmentInfos.addAll(getAttachmentInfo(inlineContent));
                         } else if (part.getFileName() != null) {
                             attachmentInfos.add(new AttachmentInfo(decodeText(part.getFileName()), true));
+                        } else {
+                            String generatedName = getGeneratedAttachmentName(part);
+                            if (generatedName != null) {
+                                attachmentInfos.add(new AttachmentInfo(generatedName, true));
+                            }
                         }
                     } else if (part.getFileName() != null) {
                         attachmentInfos.add(new AttachmentInfo(decodeText(part.getFileName()), true));
+                    } else {
+                        String generatedName = getGeneratedAttachmentName(part);
+                        if (generatedName != null) {
+                            attachmentInfos.add(new AttachmentInfo(generatedName, true));
+                        }
                     }
 
                 } else {
@@ -1129,12 +1144,21 @@ public class CommonMailUtils {
     }
     
     public static Part getAttachmentPart(String name, Object partObject) throws Exception {
+        // a part with this file name takes precedence over a part that only has this generated name
+        Part part = getAttachmentPart(name, partObject, false);
+        if (part == null) {
+            part = getAttachmentPart(name, partObject, true);
+        }
+        return part;
+    }
+
+    private static Part getAttachmentPart(String name, Object partObject, boolean generatedNames) throws Exception {
 
         if (partObject instanceof Multipart) {
             Multipart mp = (Multipart) partObject;
             for (int i = 0; i < mp.getCount(); i++) {
                 Part childPart = mp.getBodyPart(i);
-                Part attPart = getAttachmentPart(name, childPart);
+                Part attPart = getAttachmentPart(name, childPart, generatedNames);
                 if (attPart != null) {
                     return attPart;
                 }
@@ -1154,7 +1178,7 @@ public class CommonMailUtils {
 
                 Object mimeContent = safeGetContent(mimePart);
                 if (mimeContent instanceof Multipart) {
-                    Part attPart = getAttachmentPart(name, mimeContent);
+                    Part attPart = getAttachmentPart(name, mimeContent, generatedNames);
                     if (attPart != null) {
                         return attPart;
                     }
@@ -1165,13 +1189,15 @@ public class CommonMailUtils {
                 // whose children are the actual attachments
                 Multipart wrapped = getWrappedMultipart(part);
                 if (wrapped != null) {
-                    Part attPart = getAttachmentPart(name, wrapped);
+                    Part attPart = getAttachmentPart(name, wrapped, generatedNames);
                     if (attPart != null) {
                         return attPart;
                     }
-                } else if (name.equals(decodeText(part.getFileName()))) {
+                } else if (!generatedNames && name.equals(decodeText(part.getFileName()))) {
                     return part;
-                } else if (name.equals("Nachricht_" + part.getSize() + ".eml")) {
+                } else if (!generatedNames && name.equals("Nachricht_" + part.getSize() + ".eml")) {
+                    return part;
+                } else if (generatedNames && name.equals(getGeneratedAttachmentName(part))) {
                     return part;
                 }
             } else if (disposition.equalsIgnoreCase(Part.INLINE)) {
@@ -1180,13 +1206,13 @@ public class CommonMailUtils {
                     MimeBodyPart mimePart = (MimeBodyPart) part;
                     Object inlineContent = safeGetContent(mimePart);
                     if (inlineContent instanceof Multipart) {
-                        Part attPart = getAttachmentPart(name, inlineContent);
+                        Part attPart = getAttachmentPart(name, inlineContent, generatedNames);
                         if (attPart != null) {
                             return attPart;
                         }
                     }
                 }
-                if (name.equals(decodeText(part.getFileName()))) {
+                if (generatedNames ? name.equals(getGeneratedAttachmentName(part)) : name.equals(decodeText(part.getFileName()))) {
                     return part;
                 }
 
@@ -1195,6 +1221,89 @@ public class CommonMailUtils {
             }
         }
         return null;
+    }
+
+    /**
+     * Name for an attachment or inline part that has no file name of its own, e.g. an inline image without
+     * a name (#1694). getAttachmentPart finds the part again by this name. It is derived from a checksum of
+     * the decoded content, so it is the same for a copy of the message and practically always differs for
+     * parts with different content. Parts with identical content and the same extension share the name. A
+     * part that carries such a name as its file name takes precedence in getAttachmentPart. A forwarded
+     * message keeps its name derived from the size, as before. The extension follows the content type, so
+     * the part can be opened with a matching application.
+     *
+     * @param part the attachment or inline part
+     * @return the generated name, or null if the part has a file name, cannot be read or is not listed as
+     * an attachment: multipart containers and, for inline parts, the text of the message body
+     * @throws MessagingException if the part cannot be read
+     */
+    public static String getGeneratedAttachmentName(Part part) throws MessagingException {
+        if (part.getFileName() != null || part.isMimeType("multipart/*")) {
+            return null;
+        }
+        if (part.isMimeType("message/rfc822")) {
+            return "Nachricht_" + part.getSize() + ".eml";
+        }
+        if (Part.INLINE.equalsIgnoreCase(part.getDisposition()) && (part.isMimeType("text/plain") || part.isMimeType("text/html"))) {
+            return null;
+        }
+
+        CRC32 checksum = new CRC32();
+        try (InputStream is = part.getInputStream()) {
+            byte[] buffer = new byte[8192];
+            int len;
+            while ((len = is.read(buffer)) > -1) {
+                checksum.update(buffer, 0, len);
+            }
+        } catch (IOException | MessagingException ex) {
+            log.warn("Unable to read attachment without file name", ex);
+            return null;
+        }
+        return "Anhang_" + String.format("%08x", checksum.getValue()) + getExtensionForContentType(part.getContentType());
+    }
+
+    private static String getExtensionForContentType(String contentType) {
+        if (contentType == null) {
+            return ".bin";
+        }
+        String type = contentType.toLowerCase(Locale.ROOT);
+        if (type.contains(";")) {
+            type = type.substring(0, type.indexOf(';'));
+        }
+        type = type.trim();
+        switch (type) {
+            case "image/jpeg":
+            case "image/jpg":
+            case "image/pjpeg":
+                return ".jpg";
+            case "image/tiff":
+                return ".tif";
+            case "image/svg+xml":
+                return ".svg";
+            case "text/plain":
+                return ".txt";
+            case "text/calendar":
+                return ".ics";
+            case "application/msword":
+                return ".doc";
+            case "application/vnd.openxmlformats-officedocument.wordprocessingml.document":
+                return ".docx";
+            case "application/vnd.ms-excel":
+                return ".xls";
+            case "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet":
+                return ".xlsx";
+            case "application/vnd.oasis.opendocument.text":
+                return ".odt";
+            case "audio/mpeg":
+                return ".mp3";
+            default:
+                // short sub types are common extensions, e.g. image/png, application/pdf, text/html
+                String subType = type.contains("/") ? type.substring(type.indexOf('/') + 1) : "";
+                if (subType.matches("[a-z0-9]{1,5}")) {
+                    return "." + subType;
+                }
+                return ".bin";
+        }
     }
     
     public static String text2Html(String text) {

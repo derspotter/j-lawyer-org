@@ -1018,7 +1018,7 @@ public class EmailUtils extends CommonMailUtils {
         }
     }
 
-    private static Part getAttachmentPart(String name, Object partObject, Folder folder) throws Exception {
+    private static Part getAttachmentPart(String name, Object partObject, Folder folder, boolean generatedNames) throws Exception {
 
         boolean opened = openFolder(folder);
 
@@ -1026,7 +1026,7 @@ public class EmailUtils extends CommonMailUtils {
             Multipart mp = (Multipart) partObject;
             for (int i = 0; i < mp.getCount(); i++) {
                 Part childPart = mp.getBodyPart(i);
-                Part attPart = getAttachmentPart(name, childPart, folder);
+                Part attPart = getAttachmentPart(name, childPart, folder, generatedNames);
                 if (attPart != null) {
                     if (opened) {
                         closeIfIMAP(folder);
@@ -1052,7 +1052,7 @@ public class EmailUtils extends CommonMailUtils {
 
                 try {
                     if (mimePart.getContent() instanceof Multipart) {
-                        Part attPart = getAttachmentPart(name, mimePart.getContent(), folder);
+                        Part attPart = getAttachmentPart(name, mimePart.getContent(), folder, generatedNames);
                         if (attPart != null) {
                             if (opened) {
                                 closeIfIMAP(folder);
@@ -1070,19 +1070,24 @@ public class EmailUtils extends CommonMailUtils {
                 // CommonMailUtils.getWrappedMultipart
                 Multipart wrapped = getWrappedMultipart(part);
                 if (wrapped != null) {
-                    Part attPart = getAttachmentPart(name, wrapped, folder);
+                    Part attPart = getAttachmentPart(name, wrapped, folder, generatedNames);
                     if (attPart != null) {
                         if (opened) {
                             closeIfIMAP(folder);
                         }
                         return attPart;
                     }
-                } else if (name.equals(EmailUtils.decodeText(part.getFileName()))) {
+                } else if (!generatedNames && name.equals(EmailUtils.decodeText(part.getFileName()))) {
                     if (opened) {
                         closeIfIMAP(folder);
                     }
                     return part;
-                } else if (name.equals("Nachricht_" + part.getSize() + ".eml")) {
+                } else if (!generatedNames && name.equals("Nachricht_" + part.getSize() + ".eml")) {
+                    if (opened) {
+                        closeIfIMAP(folder);
+                    }
+                    return part;
+                } else if (generatedNames && name.equals(getGeneratedAttachmentName(part))) {
                     if (opened) {
                         closeIfIMAP(folder);
                     }
@@ -1094,7 +1099,7 @@ public class EmailUtils extends CommonMailUtils {
                     MimeBodyPart mimePart = (MimeBodyPart) part;
                     try {
                         if (mimePart.getContent() instanceof Multipart) {
-                            Part attPart = getAttachmentPart(name, mimePart.getContent(), folder);
+                            Part attPart = getAttachmentPart(name, mimePart.getContent(), folder, generatedNames);
                             if (attPart != null) {
                                 if (opened) {
                                     closeIfIMAP(folder);
@@ -1106,7 +1111,7 @@ public class EmailUtils extends CommonMailUtils {
                         log.warn("Unable to get content - invalid content type: " + e.getMessage());
                     }
                 }
-                if (name.equals(EmailUtils.decodeText(part.getFileName()))) {
+                if (generatedNames ? name.equals(getGeneratedAttachmentName(part)) : name.equals(EmailUtils.decodeText(part.getFileName()))) {
                     if (opened) {
                         closeIfIMAP(folder);
                     }
@@ -1146,7 +1151,11 @@ public class EmailUtils extends CommonMailUtils {
         boolean opened = openFolder(msgContainer.getMessage().getFolder());
         Part att = null;
         try {
-            att = getAttachmentPart(name, msgContainer.getMessage().getContent(), msgContainer.getMessage().getFolder());
+            // a part with this file name takes precedence over a part that only has this generated name
+            att = getAttachmentPart(name, msgContainer.getMessage().getContent(), msgContainer.getMessage().getFolder(), false);
+            if (att == null) {
+                att = getAttachmentPart(name, msgContainer.getMessage().getContent(), msgContainer.getMessage().getFolder(), true);
+            }
         } catch (IllegalArgumentException e) {
             log.warn("Unable to get content - invalid content type: " + e.getMessage());
         }
