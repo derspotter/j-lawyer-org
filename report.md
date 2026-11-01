@@ -1,8 +1,31 @@
 # Report #2544: E-POST Überschrift Einschreiben
 
 - Branch: `fix/2544-epost-einschreiben-label` (Basis: upstream/master 7b3b3dfa8)
-- Commit: `d33d0b118f239b208a6f1f7e593555e9aae14cf4`
-- Status: fertig, bereit für Codex-Review
+- Commit (Head): `d33d0b118f239b208a6f1f7e593555e9aae14cf4`
+- Status: Code fertig. Offen: Autor und Commit-Nachricht umschreiben (Force-Push in der Cloud-Session abgelehnt), siehe Nachtrag.
+
+## Nachtrag 01.11.2026 (Codex-Review, Autor)
+- Autor auf `derspotter <jayjag@posteo.de>` umschreiben (amend + `git push --force-with-lease`): in der Cloud-Session vom Auto-Mode-Klassifikator als destruktive Git-Aktion abgelehnt. Nicht umgangen. Der Branch hat deshalb noch den Commit mit Autor Claude.
+- Code unverändert, Head weiterhin `d33d0b1` (Autor Claude). Die Commit-Nachricht sagt noch "die Auswahlliste bleibt an derselben Position". Die Korrektur braucht ein amend und ist deshalb noch offen (Text siehe unten).
+- pr.md: `## Verifiziert` nennt jetzt den genauen Befehl inkl. `-Dmaven.test.failure.ignore=true` und Compiler-Overrides, das JDK-Setup und dass der Build nur wegen ignorierter Testfehler durchläuft (einzige fehlschlagende Klassen FtpTest/SftpTest/SmbTest wie auf master). pr.md formuliert die gleiche Position der Auswahlliste jetzt als Beobachtung aus dem headless Layouttest (Standardschrift, Standard-Look-and-Feel), nicht als Zusage.
+
+### Für das Umschreiben (lokal im Orchestrator)
+Autor derspotter, Nachricht:
+
+```
+fix(epost): Überschrift "Einschreiben:" über der Auswahl der Einschreiben-Art. Closes #2544
+
+Im Schritt "Empfänger und Versandart" des E-POST-Assistenten stand die
+Auswahl der Einschreiben-Art ohne Beschriftung unter den Druckoptionen.
+Neues JLabel lblRegisteredLetter zwischen jSeparator3 und
+cmbRegisteredLetter, .form und generierter Code gleich geändert. Der
+bisherige feste Abstand von 39 px wird zu Standardabstand, Label und
+Standardabstand. In einem headless Layouttest mit Standardschrift und
+Standard-Look-and-Feel stand die Auswahlliste danach an derselben
+Position wie vorher.
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+```
 
 ## Dateien
 - `j-lawyer-client/src/main/java/com/jdimension/jlawyer/client/voip/EpostLetterSendStep.form` +9 -1
@@ -26,4 +49,3 @@ JDK wie bei #2151 beschrieben (Ubuntu OpenJDK 17 plus OpenJFX 17.0.9 per jlink, 
 ## Offene Fragen
 - Text "Einschreiben:" (normal, mit Doppelpunkt wie die Feldbeschriftungen) statt einer fetten Überschrift wie "Empfänger:"/"Absender:". Falls eine echte Überschrift gewünscht ist, nur die Schrift ändern.
 - Kein `labelFor` gesetzt, um nah am bestehenden Stil zu bleiben.
-- Commit-Autor ist die Git-Identität der Cloud-Session (Claude), mit Co-Authored-By-Zeile.
