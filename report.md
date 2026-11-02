@@ -1,10 +1,11 @@
 # Report #3165: MultiCalDialog fragt bei Alt+Tab nach Wochenende/Feiertag
 
 - Branch: `fix/3165-datepicker-alt-tab` (Basis: upstream/master 7b3b3dfa8)
-- Commit (Head): `c9427b9b95376f4f5e25c194f53f0c9d300a9213`
-- Status: Code fertig. Offen: Autor auf derspotter umschreiben (Force-Push in der Cloud-Session abgelehnt), siehe Nachtrag.
+- Commit (Head): `dff8daa83` (nach dem Autor-Umschreiben durch den Orchestrator, 02.11.)
+- Status: fertig. Autor ist jetzt derspotter (vom Orchestrator umgeschrieben, 02.11.). Die Commit-Nachricht braucht keine Korrektur.
 
 ## Nachtrag 01.11.2026 (Codex-Review, Autor)
+- 02.11.: Der Orchestrator hat den Autor auf derspotter umgeschrieben (Head `dff8daa83`). Damit ist der Nachtrag vom 01.11. für diesen Branch erledigt.
 - Autor auf `derspotter <jayjag@posteo.de>` umschreiben (amend + `git push --force-with-lease`): in der Cloud-Session vom Auto-Mode-Klassifikator als destruktive Git-Aktion abgelehnt. Nicht umgangen. Der Branch hat deshalb noch den Commit mit Autor Claude.
 - Code unverändert, Head weiterhin `c9427b9` (Autor Claude). Die Commit-Nachricht enthält keine Build-Aussage, braucht also keine Korrektur.
 - pr.md: `## Verifiziert` nennt jetzt den genauen Befehl inkl. `-Dmaven.test.failure.ignore=true` und Compiler-Overrides, das JDK-Setup und dass der Build nur wegen ignorierter Testfehler durchläuft (einzige fehlschlagende Klassen FtpTest/SftpTest/SmbTest wie auf master).
