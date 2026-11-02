@@ -1,12 +1,10 @@
-# Report #3410
+# Report 3410
 
-- Branch: `fix/3410-rechnertabelle-schriftgroesse-breite` (fork derspotter/j-lawyer-org)
-- Commit: `f50ae1ca0438e5211dcc192d4c8570b3e729d575`
-- Subject: fix(documents): Tabellen aus Rechnern beim Einfügen in voller Breite und mit eingestellter Schriftgröße. Closes #3410
-- Author: derspotter <jayjag@posteo.de>
-- Base: upstream/master `7b3b3dfa8`
+- Branch: `fix/3410-rechnertabelle-schriftgroesse-breite` (fork derspotter/j-lawyer-org), base upstream/master 7b3b3dfa8
+- Commits (newest first):
+  - f50ae1ca0 derspotter <jayjag@posteo.de> | fix(documents): Tabellen aus Rechnern beim Einfügen in voller Breite und mit eingestellter Schriftgröße. Closes #3410
 
-## Files (+/-)
+## Files (+/- against master)
 
 | File | + | - |
 |---|---|---|
@@ -14,42 +12,48 @@
 | `j-lawyer-server-common/src/test/java/org/jlawyer/test/documents/StyledCalculationTableHtmlTest.java` | 728 | 0 |
 | total | 739 | 30 |
 
-## Build and tests vs. baseline
+## Build and tests (02.11.2026)
 
-JDK: Ubuntu OpenJDK 17.0.20 + OpenJFX 17.0.9 from Maven Central, combined with jlink (`/opt/jdk17fx`). Maven 3.9.11.
+JDK: Ubuntu OpenJDK 17.0.20 + OpenJFX 17.0.9 from Maven Central, combined with jlink. Maven 3.9.11. Branch and master 7b3b3dfa8 built with the identical command in the same container (master in a separate worktree):
 
 ```
 mvn -B -ntp -pl j-lawyer-client,j-lawyer-server/j-lawyer-server-ejb -am -Dmaven.test.failure.ignore=true -Dmaven.compiler.release= -Dmaven.compiler.source=17 -Dmaven.compiler.target=17 clean package
 ```
 
-Reactor result: BUILD SUCCESS (all modules compiled and packaged)
-
-Baseline = the same command on upstream/master 7b3b3dfa8 (`-pl j-lawyer-client,j-lawyer-server/j-lawyer-server-ejb,j-lawyer-backupmgr -am`).
-
-| Module | branch | master |
+| Module | branch total / executed / skipped / failed | master total / executed / skipped / failed |
 |---|---|---|
-| j-lawyer-client | tests=81 failures=0 errors=0 skipped=0 | tests=81 failures=0 errors=0 skipped=0 |
-| j-lawyer-cloud | tests=4 failures=0 errors=0 skipped=0 | tests=4 failures=0 errors=0 skipped=0 |
-| j-lawyer-fax | tests=23 failures=0 errors=0 skipped=0 | tests=23 failures=0 errors=0 skipped=0 |
-| j-lawyer-server-common | tests=108 failures=17 errors=0 skipped=0 | tests=104 failures=17 errors=0 skipped=0 |
-| j-lawyer-server-entities | tests=56 failures=0 errors=0 skipped=0 | tests=56 failures=0 errors=0 skipped=0 |
-| j-lawyer-server/j-lawyer-server-ejb | tests=829 failures=1 errors=0 skipped=16 | tests=829 failures=1 errors=0 skipped=16 |
+| j-lawyer-client | 81 / 81 / 0 / 0 | 81 / 81 / 0 / 0 |
+| j-lawyer-cloud | 4 / 4 / 0 / 0 | 4 / 4 / 0 / 0 |
+| j-lawyer-fax | 23 / 23 / 0 / 0 | 23 / 23 / 0 / 0 |
+| j-lawyer-server-common | 108 / 108 / 0 / 17 | 104 / 104 / 0 / 17 |
+| j-lawyer-server-entities | 56 / 56 / 0 / 0 | 56 / 56 / 0 / 0 |
+| j-lawyer-server/j-lawyer-server-ejb | 829 / 813 / 16 / 1 | 829 / 813 / 16 / 1 |
+| total | 1101 / 1085 / 16 / 18 | 1097 / 1081 / 16 / 18 |
 
-```
-TOTAL tests=1101 failures=18 errors=0 skipped=16
-failing classes: ['j-lawyer-server-common FtpTest', 'j-lawyer-server-common SftpTest', 'j-lawyer-server-common SmbTest', 'j-lawyer-server/j-lawyer-server-ejb LibreOfficeODFTest']
-new failures vs master: none
-master failures not present: none
-```
+Failing tests: identical to master
+
+- j-lawyer-server-common FtpTest#testCopy
+- j-lawyer-server-common FtpTest#testCreateDeleteDirectory
+- j-lawyer-server-common FtpTest#testDelete
+- j-lawyer-server-common FtpTest#testIsDirectory
+- j-lawyer-server-common FtpTest#testIsFile
+- j-lawyer-server-common FtpTest#testTraverse
+- j-lawyer-server-common SftpTest#testCopy
+- j-lawyer-server-common SftpTest#testCreateDeleteDirectory
+- j-lawyer-server-common SftpTest#testDelete
+- j-lawyer-server-common SftpTest#testIsDirectory
+- j-lawyer-server-common SftpTest#testIsFile
+- j-lawyer-server-common SftpTest#testTraverse
+- j-lawyer-server-common SmbTest#testCopy
+- j-lawyer-server-common SmbTest#testCreateDeleteDirectory
+- j-lawyer-server-common SmbTest#testDelete
+- j-lawyer-server-common SmbTest#testIsFile
+- j-lawyer-server-common SmbTest#testTraverse
+- j-lawyer-server/j-lawyer-server-ejb LibreOfficeODFTest#setReplaceEmptyLine
+
+## Antwort auf Review 02.11.
+1. Test counts: fixed, now total / executed / skipped / failed for branch and master. No code change.
+2. Baseline command: fixed. Branch and master were rebuilt on 02.11. with the identical command `-pl j-lawyer-client,j-lawyer-server/j-lawyer-server-ejb -am`.
 
 ## Evidence
-- LibreOffice 24.2 headless, `--infilter="HTML (StarWriter)" --convert-to odt` on a 2x2 table. Old markup (`<font size="3">`, as produced for setting 16): content.xml `fo:font-size="12pt"`, table width 85%. New markup (`style="font-size:16pt"`): `16pt`, 100%.
-- `plugins.global.tableproperties.table.fontsize` is passed to `XWPFRun.setFontSize()` (points) in `MicrosoftOfficeAccess` for DOCX templates, so points is the intended unit.
-
-## Unverified
-- The calculation plugins live in the separate j-lawyer-calculations repo. Assumed (not verified here) that their "copy table" uses `StyledCalculationTable.toHtml()`, since `toString()` only returns "Tabelle NxM" and the callback puts `r.toString()` on the clipboard. In this repo, `ClaimLedgerDialog` uses `toHtml()` with the same setting.
-- Paste into MS Word not tested (no Word here).
-
-## Open questions
-- Width 85% -> 100% is a visible change for everyone who pastes plugin tables. Requested in the issue ("Tabellenbreite zu schmal"), and the ODT/DOCX template path already uses full width.
-- Closing-tag fix (`</b></i></u>`) included because it is in the same lines of the same method.
+- LibreOffice 24.2 headless, `--infilter="HTML (StarWriter)" --convert-to odt` on a 2x2 table: old markup (`<font size="3">`, as produced for setting 16) gives `fo:font-size="12pt"` and 85% width, new markup gives `16pt` and 100%.
