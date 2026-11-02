@@ -1,49 +1,62 @@
-# Report #3371
+# Report 3371
 
-- Branch: `fix/3371-belegdialog-eingaben-behalten` (fork derspotter/j-lawyer-org)
-- Commit: `12f93c1fd83c13792232e071de0f127cca7949ad`
-- Subject: fix(finanzen): Belegdialog verwirft beim erneuten Bestätigen von Belegart/Nummernkreis keine Eingaben mehr. Closes #3371
-- Author: derspotter <jayjag@posteo.de>
-- Base: upstream/master `7b3b3dfa8`
+- Branch: `fix/3371-belegdialog-eingaben-behalten` (fork derspotter/j-lawyer-org), base upstream/master 7b3b3dfa8
+- Commits (newest first):
+  - cd71f8590 derspotter <jayjag@posteo.de> | fix(finanzen): Bestätigen von Belegart/Nummernkreis bricht auch bei einem Fehler beim Speichern einer Position ab, Belege ohne Belegart lassen sich speichern. Refs #3371
+  - 12f93c1fd derspotter <jayjag@posteo.de> | fix(finanzen): Belegdialog verwirft beim erneuten Bestätigen von Belegart/Nummernkreis keine Eingaben mehr. Closes #3371
 
-## Files (+/-)
+## Files (+/- against master)
 
 | File | + | - |
 |---|---|---|
-| `j-lawyer-client/src/main/java/com/jdimension/jlawyer/client/editors/files/InvoiceDialog.java` | 8 | 2 |
-| total | 8 | 2 |
+| `j-lawyer-client/src/main/java/com/jdimension/jlawyer/client/editors/files/InvoiceDialog.java` | 10 | 2 |
+| `j-lawyer-server/j-lawyer-server-ejb/src/main/java/com/jdimension/jlawyer/services/ArchiveFileService.java` | 3 | 1 |
+| `j-lawyer-server/j-lawyer-server-ejb/src/test/java/org/jlawyer/test/server/ejb/UpdateInvoiceWithoutTypeTest.java` | 758 | 0 |
+| total | 771 | 3 |
 
-## Build and tests vs. baseline
+## Build and tests (02.11.2026)
 
-JDK: Ubuntu OpenJDK 17.0.20 + OpenJFX 17.0.9 from Maven Central, combined with jlink (`/opt/jdk17fx`). Maven 3.9.11.
+JDK: Ubuntu OpenJDK 17.0.20 + OpenJFX 17.0.9 from Maven Central, combined with jlink. Maven 3.9.11. Branch and master 7b3b3dfa8 built with the identical command in the same container (master in a separate worktree):
 
 ```
-mvn -B -ntp -pl j-lawyer-client -am -Dmaven.test.failure.ignore=true -Dmaven.compiler.release= -Dmaven.compiler.source=17 -Dmaven.compiler.target=17 clean package
+mvn -B -ntp -pl j-lawyer-client,j-lawyer-server/j-lawyer-server-ejb -am -Dmaven.test.failure.ignore=true -Dmaven.compiler.release= -Dmaven.compiler.source=17 -Dmaven.compiler.target=17 clean package
 ```
 
-Reactor result: BUILD SUCCESS (all modules compiled and packaged)
-
-Baseline = the same command on upstream/master 7b3b3dfa8 (`-pl j-lawyer-client,j-lawyer-server/j-lawyer-server-ejb,j-lawyer-backupmgr -am`).
-
-| Module | branch | master |
+| Module | branch total / executed / skipped / failed | master total / executed / skipped / failed |
 |---|---|---|
-| j-lawyer-client | tests=81 failures=0 errors=0 skipped=0 | tests=81 failures=0 errors=0 skipped=0 |
-| j-lawyer-cloud | tests=4 failures=0 errors=0 skipped=0 | tests=4 failures=0 errors=0 skipped=0 |
-| j-lawyer-fax | tests=23 failures=0 errors=0 skipped=0 | tests=23 failures=0 errors=0 skipped=0 |
-| j-lawyer-server-common | tests=104 failures=17 errors=0 skipped=0 | tests=104 failures=17 errors=0 skipped=0 |
-| j-lawyer-server-entities | tests=56 failures=0 errors=0 skipped=0 | tests=56 failures=0 errors=0 skipped=0 |
+| j-lawyer-client | 81 / 81 / 0 / 0 | 81 / 81 / 0 / 0 |
+| j-lawyer-cloud | 4 / 4 / 0 / 0 | 4 / 4 / 0 / 0 |
+| j-lawyer-fax | 23 / 23 / 0 / 0 | 23 / 23 / 0 / 0 |
+| j-lawyer-server-common | 104 / 104 / 0 / 17 | 104 / 104 / 0 / 17 |
+| j-lawyer-server-entities | 56 / 56 / 0 / 0 | 56 / 56 / 0 / 0 |
+| j-lawyer-server/j-lawyer-server-ejb | 830 / 814 / 16 / 1 | 829 / 813 / 16 / 1 |
+| total | 1098 / 1082 / 16 / 18 | 1097 / 1081 / 16 / 18 |
 
-```
-TOTAL tests=268 failures=17 errors=0 skipped=0
-failing classes: ['j-lawyer-server-common FtpTest', 'j-lawyer-server-common SftpTest', 'j-lawyer-server-common SmbTest']
-new failures vs master: none
-master failures not present: none
-```
+Failing tests: identical to master
+
+- j-lawyer-server-common FtpTest#testCopy
+- j-lawyer-server-common FtpTest#testCreateDeleteDirectory
+- j-lawyer-server-common FtpTest#testDelete
+- j-lawyer-server-common FtpTest#testIsDirectory
+- j-lawyer-server-common FtpTest#testIsFile
+- j-lawyer-server-common FtpTest#testTraverse
+- j-lawyer-server-common SftpTest#testCopy
+- j-lawyer-server-common SftpTest#testCreateDeleteDirectory
+- j-lawyer-server-common SftpTest#testDelete
+- j-lawyer-server-common SftpTest#testIsDirectory
+- j-lawyer-server-common SftpTest#testIsFile
+- j-lawyer-server-common SftpTest#testTraverse
+- j-lawyer-server-common SmbTest#testCopy
+- j-lawyer-server-common SmbTest#testCreateDeleteDirectory
+- j-lawyer-server-common SmbTest#testDelete
+- j-lawyer-server-common SmbTest#testIsFile
+- j-lawyer-server-common SmbTest#testTraverse
+- j-lawyer-server/j-lawyer-server-ejb LibreOfficeODFTest#setReplaceEmptyLine
+
+## Antwort auf Review 02.11.
+1. Position failures: agreed and fixed in cd71f8590. `save()` now returns false if any `updateInvoicePosition()` call failed, so the confirmation stops before `updateInvoiceType()` and before `setEntry()` reloads. A regression test for the dialog itself is not feasible without refactoring it (modal Swing dialog, services from `JLawyerServiceLocator`), answered here instead.
+2. Untyped invoices: agreed, fixed in cd71f8590. The history text in `updateInvoice()` is null-safe ("ohne Belegart"). Covered by the new `UpdateInvoiceWithoutTypeTest`, red on master (no history entry, the NPE happens while building the text), green on this branch. Note: saving untyped invoices was already broken on master, independent of this PR. The build now includes j-lawyer-server-ejb because of this server change.
+3. Baseline command: fixed. Branch and master were rebuilt on 02.11. with the identical command (`-pl j-lawyer-client,j-lawyer-server/j-lawyer-server-ejb -am`), master in a separate worktree. Counts are given as total / executed / skipped / failed.
 
 ## Unverified
-- No GUI run against a server. The change is in a modal Swing dialog. Reviewed by reading the code paths: `save()` persists positions (`updateInvoicePosition`) and the invoice (`updateInvoice`, copies all form fields incl. status, contact, sender, payment type), then `updateInvoiceType()` only changes type/pool/number on the stored entity and returns it, `setEntry()` reloads from the server.
-
-## Open questions
-- Behaviour change: input entered before re-confirming the pool is now persisted even if the user cancels the dialog afterwards. Same pattern the dialog already uses before creating/uploading the invoice document.
-- `save()` signature changed from `void` to `boolean` (private, other callers ignore the value).
-- Merge check: `git merge-tree` against fix/2169 (same file), fix/2278, fix/2850 is clean.
+- No GUI run against a server.
