@@ -1,10 +1,11 @@
 # Report #2151: Etiketten-Einstellungen ohne Berechtigung
 
 - Branch: `fix/2151-tag-settings-permission-message` (Basis: upstream/master 7b3b3dfa8)
-- Commit (Head): `8169e65abb7f4dd523800cc036ed7c894d57f4d0`
-- Status: Code fertig. Offen: Autor auf derspotter umschreiben (Force-Push in der Cloud-Session abgelehnt), siehe Nachtrag.
+- Commit (Head): `e88695da1` (nach dem Autor-Umschreiben durch den Orchestrator, 02.11.)
+- Status: fertig. Autor ist jetzt derspotter (vom Orchestrator umgeschrieben, 02.11.). Die Commit-Nachricht braucht keine Korrektur.
 
 ## Nachtrag 01.11.2026 (Codex-Review, Autor)
+- 02.11.: Der Orchestrator hat den Autor auf derspotter umgeschrieben (Head `e88695da1`). Damit ist der Nachtrag vom 01.11. für diesen Branch erledigt.
 - Autor auf `derspotter <jayjag@posteo.de>` umschreiben (amend + `git push --force-with-lease`): in der Cloud-Session vom Auto-Mode-Klassifikator als destruktive Git-Aktion abgelehnt. Nicht umgangen. Der Branch hat deshalb noch den Commit mit Autor Claude.
 - Neu: Folge-Commit `8169e65` (Autor derspotter, Co-Authored-By Claude) begrenzt die Suche in `isPermissionDenied()` auf 20 Ebenen der Ursachenkette und testet eine zyklische Kette (`UserUtilsTest` jetzt 5 Tests). Fast-forward gepusht. Neu gebaut mit `clean package`: Client 86 Tests, 0 Fehler, fehlschlagend nur FtpTest/SftpTest/SmbTest (17 von 104 in j-lawyer-server-common), wie auf master. Ohne die Begrenzung würde der neue Test bis zum Timeout hängen.
 - Der erste Commit `b6cbd7e` hat weiter Autor Claude.
