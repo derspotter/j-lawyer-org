@@ -1,69 +1,73 @@
-# Report #smtp-timeouts
+# Report smtp-timeouts
 
-- Branch: `fix/smtp-timeouts` (fork derspotter/j-lawyer-org)
-- Commit: `da8e9283a8866cbb52fe35a9c927d1aabb0afc4e`
-- Subject: fix(e-mail): Zeitlimits für SMTP-Verbindungen, damit der Versand bei einem nicht antwortenden Mailserver nicht endlos hängt. Refs #1881
-- Author: derspotter <jayjag@posteo.de>
-- Base: upstream/master `7b3b3dfa8`
+- Branch: `fix/smtp-timeouts` (fork derspotter/j-lawyer-org), base upstream/master 7b3b3dfa8
+- Commits (newest first):
+  - 4216d4264 derspotter <jayjag@posteo.de> | fix(e-mail): wirkungslose Zeile im auskommentierten SMTP-Code des Clients wieder entfernt. Refs #1881
+  - da8e9283a derspotter <jayjag@posteo.de> | fix(e-mail): Zeitlimits für SMTP-Verbindungen, damit der Versand bei einem nicht antwortenden Mailserver nicht endlos hängt. Refs #1881
 
-## Files (+/-)
+## Files (+/- against master)
 
 | File | + | - |
 |---|---|---|
-| `j-lawyer-client/src/main/java/com/jdimension/jlawyer/client/mail/SendAction.java` | 2 | 0 |
 | `j-lawyer-server-common/src/main/java/com/jdimension/jlawyer/email/CommonMailUtils.java` | 25 | 0 |
 | `j-lawyer-server-common/src/test/java/org/jlawyer/test/email/SmtpTimeoutsTest.java` | 685 | 0 |
 | `j-lawyer-server/j-lawyer-server-ejb/src/main/java/com/jdimension/jlawyer/services/EmailService.java` | 2 | 0 |
 | `j-lawyer-server/j-lawyer-server-ejb/src/main/java/com/jdimension/jlawyer/services/SystemManagement.java` | 3 | 0 |
 | `j-lawyer-server/j-lawyer-server-ejb/src/main/java/org/jlawyer/async/OutgoingMailProcessor.java` | 2 | 0 |
 | `j-lawyer-server/j-lawyer-server-war/src/main/java/com/jdimension/jlawyer/timer/SystemMonitorTask.java` | 2 | 0 |
-| total | 721 | 0 |
+| total | 719 | 0 |
 
-## Build and tests vs. baseline
+## Build and tests (02.11.2026)
 
-JDK: Ubuntu OpenJDK 17.0.20 + OpenJFX 17.0.9 from Maven Central, combined with jlink (`/opt/jdk17fx`). Maven 3.9.11.
+JDK: Ubuntu OpenJDK 17.0.20 + OpenJFX 17.0.9 from Maven Central, combined with jlink. Maven 3.9.11. Branch and master 7b3b3dfa8 built with the identical command in the same container (master in a separate worktree):
 
 ```
-mvn -B -ntp -pl j-lawyer-client,j-lawyer-server/j-lawyer-server-ejb,j-lawyer-server/j-lawyer-server-war -am -Dmaven.test.failure.ignore=true -Dmaven.compiler.release= -Dmaven.compiler.source=17 -Dmaven.compiler.target=17 clean package
+mvn -B -ntp -pl j-lawyer-server/j-lawyer-server-ejb,j-lawyer-server/j-lawyer-server-war -am -Dmaven.test.failure.ignore=true -Dmaven.compiler.release= -Dmaven.compiler.source=17 -Dmaven.compiler.target=17 clean package
 ```
 
-Reactor result: BUILD SUCCESS (all modules compiled and packaged)
-
-Baseline = the same command on upstream/master 7b3b3dfa8 (`-pl j-lawyer-client,j-lawyer-server/j-lawyer-server-ejb,j-lawyer-backupmgr -am`).
-
-| Module | branch | master |
+| Module | branch total / executed / skipped / failed | master total / executed / skipped / failed |
 |---|---|---|
-| j-lawyer-client | tests=81 failures=0 errors=0 skipped=0 | tests=81 failures=0 errors=0 skipped=0 |
-| j-lawyer-cloud | tests=4 failures=0 errors=0 skipped=0 | tests=4 failures=0 errors=0 skipped=0 |
-| j-lawyer-fax | tests=23 failures=0 errors=0 skipped=0 | tests=23 failures=0 errors=0 skipped=0 |
-| j-lawyer-server-common | tests=105 failures=17 errors=0 skipped=0 | tests=104 failures=17 errors=0 skipped=0 |
-| j-lawyer-server-entities | tests=56 failures=0 errors=0 skipped=0 | tests=56 failures=0 errors=0 skipped=0 |
-| j-lawyer-server/j-lawyer-server-ejb | tests=829 failures=1 errors=0 skipped=16 | tests=829 failures=1 errors=0 skipped=16 |
-| j-lawyer-server/j-lawyer-server-war | tests=5 failures=4 errors=0 skipped=0 | tests=5 failures=4 errors=0 skipped=0 |
+| j-lawyer-cloud | 4 / 4 / 0 / 0 | 4 / 4 / 0 / 0 |
+| j-lawyer-fax | 23 / 23 / 0 / 0 | 23 / 23 / 0 / 0 |
+| j-lawyer-server-common | 105 / 105 / 0 / 17 | 104 / 104 / 0 / 17 |
+| j-lawyer-server-entities | 56 / 56 / 0 / 0 | 56 / 56 / 0 / 0 |
+| j-lawyer-server/j-lawyer-server-ejb | 829 / 813 / 16 / 1 | 829 / 813 / 16 / 1 |
+| j-lawyer-server/j-lawyer-server-war | 5 / 5 / 0 / 4 | 5 / 5 / 0 / 4 |
+| total | 1022 / 1006 / 16 / 22 | 1021 / 1005 / 16 / 22 |
 
-```
-TOTAL tests=1103 failures=22 errors=0 skipped=16
-failing classes: ['j-lawyer-server-common FtpTest', 'j-lawyer-server-common SftpTest', 'j-lawyer-server-common SmbTest', 'j-lawyer-server/j-lawyer-server-ejb LibreOfficeODFTest', 'j-lawyer-server/j-lawyer-server-war BackupExecutorTest', 'j-lawyer-server/j-lawyer-server-war FileNameEncodingTest', 'j-lawyer-server/j-lawyer-server-war SyncTest']
-new failures vs master: none
-master failures not present: none
-```
+Failing tests: identical to master
 
-## Evidence
-- Probe with javax.mail 1.6.2 (the project's version) against a local socket that accepts and never sends the SMTP greeting: without timeout properties `Transport.connect()` was still blocked after 12 s. With `mail.smtp.timeout=2000` it failed after ~2 s with `SocketTimeoutException: Read timed out`.
-- IMAP timeouts were added by j-dimension in e9f331df2 (2026-03-20, "timeouts for mailserver connections") in `EmailService` only.
-- RFC 5321 section 4.5.3.2 recommends client timeouts of up to 10 minutes (reply after the end of the message data), hence 600 s read timeout instead of the 30 s used for IMAP.
+- j-lawyer-server-common FtpTest#testCopy
+- j-lawyer-server-common FtpTest#testCreateDeleteDirectory
+- j-lawyer-server-common FtpTest#testDelete
+- j-lawyer-server-common FtpTest#testIsDirectory
+- j-lawyer-server-common FtpTest#testIsFile
+- j-lawyer-server-common FtpTest#testTraverse
+- j-lawyer-server-common SftpTest#testCopy
+- j-lawyer-server-common SftpTest#testCreateDeleteDirectory
+- j-lawyer-server-common SftpTest#testDelete
+- j-lawyer-server-common SftpTest#testIsDirectory
+- j-lawyer-server-common SftpTest#testIsFile
+- j-lawyer-server-common SftpTest#testTraverse
+- j-lawyer-server-common SmbTest#testCopy
+- j-lawyer-server-common SmbTest#testCreateDeleteDirectory
+- j-lawyer-server-common SmbTest#testDelete
+- j-lawyer-server-common SmbTest#testIsFile
+- j-lawyer-server-common SmbTest#testTraverse
+- j-lawyer-server/j-lawyer-server-ejb LibreOfficeODFTest#setReplaceEmptyLine
+- j-lawyer-server/j-lawyer-server-war BackupExecutorTest#testBackupEncrypted
+- j-lawyer-server/j-lawyer-server-war BackupExecutorTest#testBackupUnEncrypted
+- j-lawyer-server/j-lawyer-server-war FileNameEncodingTest#testZip4JFileNameEncoding
+- j-lawyer-server/j-lawyer-server-war SyncTest#testSync
 
-## Call sites (all now call `CommonMailUtils.setSmtpTimeouts()` before custom properties)
-- `OutgoingMailProcessor` (server send queue)
-- `EmailService.testSmtpConnection()` and the second SMTP session in `EmailService`
-- `SystemManagement` (two server notification paths)
-- `SystemMonitorTask` (monitoring alert mails, war module)
-- `SendAction` (client, direct SMTP path)
+## Antwort auf Review 02.11.
+1. Baseline command: fixed. Branch and master were rebuilt on 02.11. with the identical command `-pl j-lawyer-server/j-lawyer-server-ejb,j-lawyer-server/j-lawyer-server-war -am`. The client is no longer changed by this branch (see 2), so it is not part of the selection.
+2. SendAction call site in commented-out code: agreed, the line sat inside the block comment "Legacy SMTP send path - removed". Removed together with the unused import in 4216d4264, the branch no longer changes the client. The PR now names the six active server call sites. While checking this I also corrected the description of `OutgoingMailProcessor`: it is the JMS bean for system notification mails, not the send queue for user mails (those go synchronously through `EmailService.smtpSendMail()`).
+3. Counts and failure causes: fixed, total / executed / skipped / failed and the WAR test prerequisites taken from their sources.
+4. Library version: agreed. The probe was repeated with `com.sun.mail:jakarta.mail:1.6.8` (server) and shows the same behaviour: blocked after 12 s without timeouts, `SocketTimeoutException` after 2 s with `mail.smtp.timeout=2000`. How the probe works and its output are below (the Java source itself is not quoted because the notes must not contain semicolons).
 
-## Unverified
-- Not run against a real SMTP server. A server that is slow but alive is unaffected as long as each reply comes within 10 minutes.
-
-## Open questions
-- No write timeout (`mail.smtp.writetimeout`), it needs an extra thread per connection in JavaMail.
-- `Refs #1881` (mail client IPv6 / timeouts issue), it does not close it.
-- The first push imported `java.util.Properties` in `CommonMailUtils`, which collided textually with the import block of the other lane's origin/fix/1694-inline-anhaenge-ohne-namen. Amended (force-with-lease, own branch) to use the fully qualified `java.util.Properties` in the method signature, now merge-clean with fix/1694. Build and tests re-run on the amended commit with identical results.
+## Probe
+`java -cp jakarta.mail-1.6.8.jar SmtpProbe.java` (single-file source launch, JDK 17). The probe opens a local `ServerSocket` that accepts connections and never sends the SMTP greeting. It then calls `Transport.connect()` for protocol `smtp` against that port twice in a separate thread and waits at most 12 s each time. The first run uses only `mail.smtp.host` and `mail.smtp.port`, the second adds `mail.smtp.connectiontimeout=30000` and `mail.smtp.timeout=2000`. Output:
+- `javax.mail implementation: file:.../com/sun/mail/jakarta.mail/1.6.8/jakarta.mail-1.6.8.jar`
+- `without timeouts: still blocked after 12005 ms`
+- `with timeouts: failed after 2006 ms: java.net.SocketTimeoutException: Read timed out`
