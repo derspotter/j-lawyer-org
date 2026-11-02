@@ -15,13 +15,14 @@ Die stderr-Ausgabe von `mysql` wird schon zeilenweise gelesen. Beginnt eine Zeil
   - Fehlerfreie Sicherung: endet ohne Fehler, die Tabelle ist wiederhergestellt.
   - Zusammen mit dem PR zu #2592 wird die MySQL-8-Sicherung in MariaDB vollständig und ohne Fehlermeldung wiederhergestellt.
 - JDK: Ubuntu OpenJDK 17.0.20 mit OpenJFX 17.0.9 (Jars von Maven Central, per `jlink` zu einem JDK mit JavaFX-Modulen zusammengefügt), Maven 3.9.11. `maven.compiler.release` ist leer gesetzt, weil `--release` die JavaFX-Module eines solchen JDK nicht sieht.
-- Build: `mvn -B -ntp -pl j-lawyer-backupmgr -am -Dmaven.test.failure.ignore=true -Dmaven.compiler.release= -Dmaven.compiler.source=17 -Dmaven.compiler.target=17 clean package`
-- Alle Module bauen. j-lawyer-backupmgr hat auf master und auf diesem Branch keine aktiven Tests (0 ausgeführt), fehlgeschlagene Testklassen damit identisch mit master (keine).
+- Build dieses Branches und Vergleichsbuild von master 7b3b3dfa8 mit genau demselben Befehl im selben Setup: `mvn -B -ntp -pl j-lawyer-backupmgr -am -Dmaven.test.failure.ignore=true -Dmaven.compiler.release= -Dmaven.compiler.source=17 -Dmaven.compiler.target=17 clean package`
+- Der Befehl baut die gewählten Module samt ihren Abhängigkeiten im Reactor, alle davon bauen. Tests auf diesem Branch: 0 gesamt, davon 0 ausgeführt und 0 übersprungen, 0 fehlgeschlagen. Auf master: 0 gesamt, 0 ausgeführt, 0 übersprungen, 0 fehlgeschlagen.
+- Keine fehlgeschlagenen Tests, wie auf master.
 - Kein Unit-Test: Die Prüfung steckt im Prozessaufruf des `mysql`-Clients.
 
 ## Nicht abgedeckt
+- Wiederherstellung über die Oberfläche des Backupmanagers nicht ausprobiert, MySQL 8 als Zielserver nicht getestet.
 - Bei einem Fehler läuft das Einspielen weiterhin bis zum Ende der Sicherung durch, erst danach wird der Fehler gemeldet. Die Datenbank bleibt unvollständig. Ein Abbruch beim ersten Fehler wäre mit `--abort-source-on-error` möglich, das der MariaDB-Client kennt. Ob der MySQL-Client es kennt, ist nicht geprüft.
-- MySQL 8 als Zielserver nicht getestet.
 
 Refs #2592
 

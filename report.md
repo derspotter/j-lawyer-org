@@ -1,51 +1,38 @@
-# Report #restore-sql-fehler-erkennen
+# Report restore-sql-fehler-erkennen
 
-- Branch: `fix/restore-sql-fehler-erkennen` (fork derspotter/j-lawyer-org)
-- Commit: `e256acae0e8396916a51d0e916ad750c314b40e4`
-- Subject: fix(backup): Wiederherstellung meldet Fehler beim Einspielen der Datenbanksicherung, statt Erfolg anzuzeigen. Refs #2592
-- Author: derspotter <jayjag@posteo.de>
-- Base: upstream/master `7b3b3dfa8`
+- Branch: `fix/restore-sql-fehler-erkennen` (fork derspotter/j-lawyer-org), base upstream/master 7b3b3dfa8
+- Commits (newest first):
+  - e256acae0 derspotter <jayjag@posteo.de> | fix(backup): Wiederherstellung meldet Fehler beim Einspielen der Datenbanksicherung, statt Erfolg anzuzeigen. Refs #2592
 
-## Files (+/-)
+## Files (+/- against master)
 
 | File | + | - |
 |---|---|---|
 | `j-lawyer-backupmgr/src/main/java/org/jlawyer/backupmgr/impl/RestoreExecutor.java` | 8 | 0 |
 | total | 8 | 0 |
 
-## Build and tests vs. baseline
+## Build and tests (02.11.2026)
 
-JDK: Ubuntu OpenJDK 17.0.20 + OpenJFX 17.0.9 from Maven Central, combined with jlink (`/opt/jdk17fx`). Maven 3.9.11.
+JDK: Ubuntu OpenJDK 17.0.20 + OpenJFX 17.0.9 from Maven Central, combined with jlink. Maven 3.9.11. Branch and master 7b3b3dfa8 built with the identical command in the same container (master in a separate worktree):
 
 ```
 mvn -B -ntp -pl j-lawyer-backupmgr -am -Dmaven.test.failure.ignore=true -Dmaven.compiler.release= -Dmaven.compiler.source=17 -Dmaven.compiler.target=17 clean package
 ```
 
-Reactor result: BUILD SUCCESS (all modules compiled and packaged)
-
-Baseline = the same command on upstream/master 7b3b3dfa8 (`-pl j-lawyer-client,j-lawyer-server/j-lawyer-server-ejb,j-lawyer-backupmgr -am`).
-
-| Module | branch | master |
+| Module | branch total / executed / skipped / failed | master total / executed / skipped / failed |
 |---|---|---|
+| total | 0 / 0 / 0 / 0 | 0 / 0 / 0 / 0 |
 
-```
-TOTAL tests=0 failures=0 errors=0 skipped=0
-failing classes: []
-new failures vs master: none
-master failures not present: none
-```
+Failing tests: identical to master
 
-## Evidence
-- MariaDB 10.11.14 local, reflection on the real private `restoreDatabase()`, unencrypted `jlawyerdb-dump.sql.zip`:
-  - master jar + dump with `utf8mb4_0900_ai_ci`: returns normally, `information_schema` shows 0 tables in jlawyerdb.
-  - branch jar + same dump: `Exception: Datenbankwiederherstellung fehlgeschlagen: ERROR 1273 (HY000) at line 6 in file: '.../jlawyerdb-dump.sql': Unknown collation: 'utf8mb4_0900_ai_ci'`.
-  - branch jar + clean dump (collation replaced by hand): returns normally, 1 table.
-  - temporary merge of this branch with fix/2592 (not committed): MySQL 8 dump restored, table `cases` with `utf8mb4_unicode_ci`, no exception.
-- Both callers surface the message: `BackupManagerLauncher` (CLI) prints "Wiederherstellung fehlgeschlagen: ..." and exits 1, the JavaFX controller sets it into `lblProgress`.
+- none
 
-## Unverified
-- MySQL 8 server/client as target. MySQL prints errors as `ERROR <code> (<state>) at line <n> in file: ...` as well, but not run here.
+## Antwort auf Review 02.11.
+1. Build comparison: fixed. Branch and master were rebuilt on 02.11. with the identical command `-pl j-lawyer-backupmgr -am`, which builds only the parent and the backup manager, the comparison covers exactly these. "Alle Module" in the PR now refers to the selected reactor. No code change.
 
-## Open questions
-- No issue number of its own (found while fixing #2592), hence `Refs #2592`. Independent of fix/2592, `git merge-tree` clean.
-- Detection is based on stderr lines starting with `ERROR`. A data line starting with "ERROR" can only appear in the echoed text of a statement that failed anyway.
+## Evidence (01.11., MariaDB 10.11.14 local, reflection on the real private `restoreDatabase()`)
+- master jar + dump with `utf8mb4_0900_ai_ci`: returns normally, 0 tables in jlawyerdb.
+- branch jar + same dump: `Datenbankwiederherstellung fehlgeschlagen: ERROR 1273 (HY000) at line 6 in file: '.../jlawyerdb-dump.sql': Unknown collation: 'utf8mb4_0900_ai_ci'`.
+- branch jar + clean dump: returns normally, 1 table.
+- temporary merge with fix/2592 (not committed): MySQL 8 dump restored completely.
+- The code of this branch is unchanged since then, the build was repeated on 02.11.
