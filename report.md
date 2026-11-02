@@ -1,53 +1,43 @@
-# Report #2592
+# Report 2592
 
-- Branch: `fix/2592-restore-mariadb-collation` (fork derspotter/j-lawyer-org)
-- Commit: `da04769b65232ac015b53844319c8c428f5ac5cc`
-- Subject: fix(backup): Wiederherstellung in MariaDB ersetzt die MySQL-8-Kollation utf8mb4_0900_ai_ci. Closes #2592
-- Author: derspotter <jayjag@posteo.de>
-- Base: upstream/master `7b3b3dfa8`
+- Branch: `fix/2592-restore-mariadb-collation` (fork derspotter/j-lawyer-org), base upstream/master 7b3b3dfa8
+- Commits (newest first):
+  - 198715355 derspotter <jayjag@posteo.de> | fix(backup): Kollation nur in den SQL-Anweisungen ersetzen und nur, wenn der Zielserver sie nicht kennt. Refs #2592
+  - da04769b6 derspotter <jayjag@posteo.de> | fix(backup): Wiederherstellung in MariaDB ersetzt die MySQL-8-Kollation utf8mb4_0900_ai_ci. Closes #2592
 
-## Files (+/-)
+## Files (+/- against master)
 
 | File | + | - |
 |---|---|---|
-| `j-lawyer-backupmgr/src/main/java/org/jlawyer/backupmgr/impl/RestoreExecutor.java` | 22 | 0 |
-| `j-lawyer-backupmgr/src/main/java/org/jlawyer/backupmgr/impl/SqlDumpUtils.java` | 746 | 0 |
-| `j-lawyer-backupmgr/src/test/java/org/jlawyer/test/backupmgr/SqlDumpUtilsTest.java` | 748 | 0 |
-| total | 1516 | 0 |
+| `j-lawyer-backupmgr/src/main/java/org/jlawyer/backupmgr/impl/RestoreExecutor.java` | 33 | 0 |
+| `j-lawyer-backupmgr/src/main/java/org/jlawyer/backupmgr/impl/SqlDumpUtils.java` | 771 | 0 |
+| `j-lawyer-backupmgr/src/test/java/org/jlawyer/test/backupmgr/SqlDumpUtilsTest.java` | 766 | 0 |
+| total | 1570 | 0 |
 
-## Build and tests vs. baseline
+## Build and tests (02.11.2026)
 
-JDK: Ubuntu OpenJDK 17.0.20 + OpenJFX 17.0.9 from Maven Central, combined with jlink (`/opt/jdk17fx`). Maven 3.9.11.
+JDK: Ubuntu OpenJDK 17.0.20 + OpenJFX 17.0.9 from Maven Central, combined with jlink. Maven 3.9.11. Branch and master 7b3b3dfa8 built with the identical command in the same container (master in a separate worktree):
 
 ```
 mvn -B -ntp -pl j-lawyer-backupmgr -am -Dmaven.test.failure.ignore=true -Dmaven.compiler.release= -Dmaven.compiler.source=17 -Dmaven.compiler.target=17 clean package
 ```
 
-Reactor result: BUILD SUCCESS (all modules compiled and packaged)
-
-Baseline = the same command on upstream/master 7b3b3dfa8 (`-pl j-lawyer-client,j-lawyer-server/j-lawyer-server-ejb,j-lawyer-backupmgr -am`).
-
-| Module | branch | master |
+| Module | branch total / executed / skipped / failed | master total / executed / skipped / failed |
 |---|---|---|
-| j-lawyer-backupmgr | tests=4 failures=0 errors=0 skipped=0 | n/a |
+| j-lawyer-backupmgr | 5 / 5 / 0 / 0 | n/a |
+| total | 5 / 5 / 0 / 0 | 0 / 0 / 0 / 0 |
 
-```
-TOTAL tests=4 failures=0 errors=0 skipped=0
-failing classes: []
-new failures vs master: none
-master failures not present: none
-```
+Failing tests: identical to master
 
-## Evidence
-- MariaDB 10.11.14 (apt, local), hand-written dump in mysqldump 8.0 style (`COLLATE utf8mb4_0900_ai_ci` on columns and table). Plain `mysql -e "...;source dump;"`: ERROR 1273 Unknown collation, exit code 0.
-- E2E via reflection on the real private `restoreDatabase()` (RestoreExecutor constructor with host 127.0.0.1:3306, db jlawyerdb, unencrypted `jlawyerdb-dump.sql.zip`): master jar -> ERROR 1273, table missing, method returns normally. Branch jar -> progress "Kollation ... ersetzt (3 Stellen)", table `cases` with `utf8mb4_unicode_ci`, 2 rows, umlaut bytes C3 BC intact.
-- MariaDB product version via Connector/J: `5.5.5-10.11.14-MariaDB-...`, contains "mariadb" (that is what `isMariaDb()` checks).
+- none
 
-## Unverified
-- MySQL 8 as target (no MySQL server here). `isMariaDb()` returns false there, the dump is not touched.
-- Windows path handling: the dump path is built before the existing backslash replacement for the `source` command, `java.io.File` accepts it as is.
+## Antwort auf Review 02.11.
+1. [P1] Data changed: agreed, fixed in 198715355. Replacement only after `COLLATE` (with optional `=`) and in `...collation... =` assignments, and never in lines starting with `INSERT ` or `REPLACE ` (mysqldump writes one line per statement, escapes newlines inside values). Test `testDataIsNotChanged` covers a note containing the collation name and a `COLLATE ...` text inside an INSERT and a REPLACE.
+2. [P2] Compatible targets converted: agreed, fixed. `isMariaDb()` is replaced by `isCollationUnknown()`, which runs `SELECT _utf8mb4'a' COLLATE utf8mb4_0900_ai_ci` and only reports "unknown" for error 1273. Any other failure leaves the dump unchanged (as before). Checked against MariaDB 10.11.14 (unknown) and with `utf8mb4_unicode_ci` as a known collation, see Evidence. MySQL 8 / MariaDB >= 11.4.5 not available here.
+3. [P3] Boundary test: agreed, fixed. The filler now accounts for the `COLLATE=` prefix and the test asserts that the block boundary lies "before" characters into the collation name, for every position 1 to 17.
+4. [P2] Build evidence: fixed. Branch and master built with the identical command `-pl j-lawyer-backupmgr -am` (parent and backup manager only), stated as such.
 
-## Open questions
-- Only `utf8mb4_0900_ai_ci` is mapped, exactly as in j-dimension's issue text. Other `utf8mb4_0900_*` collations would only appear if set explicitly.
-- Found while testing: `mysql` exits 0 when statements inside `source` fail, so a broken restore is reported as success. Not changed here (separate topic). Could be addressed with `--abort-source-on-error` (verified in the MariaDB 10.11 client here, support in the MySQL 8 client not checked), needs a decision. Error detection itself is now on its own branch fix/restore-sql-fehler-erkennen (notes/restore-sql-fehler-erkennen), independent of this one.
-- New files carry the full AGPL header like the other recent files, hence the large +lines count.
+## Evidence (02.11., MariaDB 10.11.14 local, built j-lawyer-backupmgr.jar of this branch, reflection on the private methods)
+- `isCollationUnknown("utf8mb4_0900_ai_ci")` = true, `isCollationUnknown("utf8mb4_unicode_ci")` = false.
+- `restoreDatabase()` with a mysqldump-8.0-style dump (two columns and the table with `utf8mb4_0900_ai_ci`, plus an INSERT whose value contains "Kollation utf8mb4_0900_ai_ci, siehe COLLATE utf8mb4_0900_ai_ci"): progress "... ersetzt (3 Stellen)", returned normally, table `case_notes` with `utf8mb4_unicode_ci`, the stored note is unchanged including both mentions of the collation and the umlaut.
+- Red check of the data test: the 01.11. implementation (plain replacement in the whole file) would change both mentions inside the INSERT.
