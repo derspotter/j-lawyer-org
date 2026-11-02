@@ -53,7 +53,7 @@ Ergebnis Head `2c94a25`: Build läuft durch, weil Testfehler ignoriert werden.
 j-lawyer-invoicing und j-lawyer-server-api haben keine Tests. Die 17 Fehlschläge sind FtpTest (6), SftpTest (6), SmbTest (5), wie auf master (dort Client 81 Tests). Neu im Client: FileUtilsTest von 3 auf 6 Tests (testKeepFileNameUnlessTaken, testKeepFileNamesReservesEarlierNames, testKeepFileNamesUnicodeCaseIndependentOfLocale, testKeepFileNamesCancel).
 
 ## Merge-Prüfung
-Stand Feature-Commit: `git merge-tree --write-tree` gegen alle Branches unter origin/fix/*, die ArchiveFilePanel.java oder FileUtils.java ändern (nur `fix/duplicate-document-keep-metadata`), Exit 0.
+`git merge-tree --write-tree` gegen alle Branches unter origin/fix/*, die ArchiveFilePanel.java oder FileUtils.java ändern (nur `fix/duplicate-document-keep-metadata`): Exit 0, für den Feature-Commit und erneut für Head `2c94a25`.
 
 ## Nicht im laufenden Client oder gegen einen Server ausprobiert
 - Der ganze Ablauf in ArchiveFilePanel: Auswahl der Zielakte, Frage "Beibehalten/Neu benennen", Konfliktdialoge, Kopieren bzw. Verschieben, Verhalten bei Abbruch.
