@@ -9,16 +9,18 @@ Ist bei einem Beleg „USt ausweisen“ nicht angehakt, zeigt der Belegdialog al
 ## Fix
 - Ohne ausgewiesene USt ist die Bruttosumme gleich der Nettosumme, wie im Belegdialog.
 - Nach einem Wechsel des Nummernkreises in `updateInvoiceType()` werden die Summen neu berechnet, weil der Nummernkreis die Einstellung „USt ausweisen“ setzt.
+- Der grüne Haken in der Belegübersicht rechnet mit dem Beleg weiter, den der Server nach dem Speichern zurückgibt. Bisher nutzte er den alten Stand und schlug für bestehende Belege ohne USt weiter den Betrag mit Umsatzsteuer vor.
 
 ## Verifiziert
-- Neuer Test `InvoiceTotalTest` (j-lawyer-server-ejb): Mit USt 150,00 netto / 172,50 brutto wie bisher, ohne USt 150,00 / 150,00. Ohne die Änderung schlägt der Test fehl („expected 150.00 but was 172.50“).
+- Test `InvoiceTotalTest` (j-lawyer-server-ejb): mit USt 150,00 netto und 172,50 brutto, ohne USt 150,00 und 150,00, und ein Wechsel von einem Nummernkreis mit USt zu einem ohne USt setzt die Bruttosumme von 119,00 auf 100,00. Ohne die Änderung schlagen der zweite und der dritte Fall fehl.
 - JDK: Ubuntu OpenJDK 17.0.20 mit OpenJFX 17.0.9 (Jars von Maven Central, per `jlink` zu einem JDK mit JavaFX-Modulen zusammengefügt), Maven 3.9.11. `maven.compiler.release` ist leer gesetzt, weil `--release` die JavaFX-Module eines solchen JDK nicht sieht.
-- Build: `mvn -B -ntp -pl j-lawyer-server/j-lawyer-server-ejb -am -Dmaven.test.failure.ignore=true -Dmaven.compiler.release= -Dmaven.compiler.source=17 -Dmaven.compiler.target=17 clean package`
-- Alle Module des Reactors bauen. Tests: 1018 ausgeführt (1016 auf master plus 2 neue), 18 fehlgeschlagen. Fehlgeschlagen sind nur FtpTest, SftpTest und SmbTest in j-lawyer-server-common (sie brauchen echte FTP-, SFTP- und SMB-Server) sowie `LibreOfficeODFTest.setReplaceEmptyLine` in j-lawyer-server-ejb (bekannter Fehler auf master). Das sind dieselben Klassen und Testfälle wie auf master 7b3b3dfa8 mit demselben Setup.
+- Build dieses Branches und Vergleichsbuild von master 7b3b3dfa8 mit genau demselben Befehl im selben Setup: `mvn -B -ntp -pl j-lawyer-client,j-lawyer-server/j-lawyer-server-ejb -am -Dmaven.test.failure.ignore=true -Dmaven.compiler.release= -Dmaven.compiler.source=17 -Dmaven.compiler.target=17 clean package`
+- Der Befehl baut die gewählten Module samt ihren Abhängigkeiten im Reactor, alle davon bauen. Tests auf diesem Branch: 1100 gesamt, davon 1084 ausgeführt und 16 übersprungen, 18 fehlgeschlagen. Auf master: 1097 gesamt, 1081 ausgeführt, 16 übersprungen, 18 fehlgeschlagen. Neu sind 3 Tests.
+- Die fehlgeschlagenen Tests sind genau dieselben wie auf master: FtpTest, SftpTest und SmbTest in j-lawyer-server-common brauchen echte FTP-, SFTP- und SMB-Server mit Zugangsdaten aus Umgebungsvariablen. `LibreOfficeODFTest.setReplaceEmptyLine` in j-lawyer-server-ejb ist ein bekannter Fehler auf master (behoben durch den offenen PR #3703).
 
 ## Nicht abgedeckt
+- Nicht in einem laufenden Client und nicht gegen eine Datenbank ausprobiert. Für den grünen Haken gibt es keinen automatischen Test, er steckt im Swing-Panel mit Serveraufrufen.
 - Bereits gespeicherte Belege behalten ihre Bruttosumme, bis sie das nächste Mal gespeichert werden. Eine Datenkorrektur bestehender Belege würde eine Migration brauchen und ist nicht Teil dieses PRs.
-- Kein Test gegen eine Datenbank.
 
 Ohne eigenes Issue, gefunden beim Prüfen von #3170 und #3488.
 
