@@ -2,6 +2,7 @@
 
 - Branch: `fix/girocode-betrag` (fork derspotter/j-lawyer-org), base upstream/master 7b3b3dfa8
 - Commits (newest first):
+  - 0a50831a3 derspotter <jayjag@posteo.de> | docs(finanzen): JavaDoc von AmountUtils.parseExact nennt die Grenze von etwa 131.000 nur für float
   - a2ad1f0eb derspotter <jayjag@posteo.de> | fix(finanzen): Einlesen des Girocode-Betrags in eine testbare Hilfsmethode ausgelagert
   - 213b2e15a derspotter <jayjag@posteo.de> | fix(finanzen): Girocode enthält auch bei Beträgen ab rund 131.000 EUR den exakten Rechnungsbetrag
 
@@ -10,11 +11,11 @@
 | File | + | - |
 |---|---|---|
 | `j-lawyer-client/src/main/java/com/jdimension/jlawyer/client/editors/files/InvoiceDialog.java` | 3 | 1 |
-| `j-lawyer-client/src/main/java/com/jdimension/jlawyer/client/utils/AmountUtils.java` | 692 | 0 |
+| `j-lawyer-client/src/main/java/com/jdimension/jlawyer/client/utils/AmountUtils.java` | 694 | 0 |
 | `j-lawyer-client/src/test/java/org/jlawyer/test/client/utils/AmountUtilsTest.java` | 714 | 0 |
-| total | 1409 | 1 |
+| total | 1411 | 1 |
 
-## Build and tests (02.11.2026)
+## Build and tests (03.11.2026)
 
 JDK: Ubuntu OpenJDK 17.0.20 + OpenJFX 17.0.9 from Maven Central, combined with jlink. Maven 3.9.11. Branch and master 7b3b3dfa8 built with the identical command in the same container (master in a separate worktree):
 
@@ -58,3 +59,7 @@ Failing tests: identical to master
 ## Evidence
 - Probe (01.11., outside the repo): every amount from 100.000,00 to 300.000,00 in steps of 0,07, formatted with `#,##0.00` (German symbols), parsed back the old way and formatted like the server (`0.00`, Locale.US): 1.041.827 of 2.857.143 off by a cent, first 131.072,37 -> 131072.38. Parsed with a clone of the format and `setParseBigDecimal(true)` all exact.
 - `AmountUtilsTest.testLargeAmountsAreExact` also asserts that the old float based parsing of 150.000,01 does not give 150000.01.
+
+## Antwort auf Review 03.11.
+1. [P3] JavaDoc of `AmountUtils.parseExact()`: agreed, fixed in 0a50831a3. The limit of roughly 131.000 is now attributed to float only. For double the JavaDoc says that it has enough digits for usual amounts but can not represent most cent values exactly, and that parsing into BigDecimal avoids the binary rounding.
+2. [P3] SMB test prerequisites: agreed. FtpTest and SftpTest read their credentials from environment variables, SmbTest uses the hard-coded share smb://j-lawyer-box/j-lawyer-share/. pr.md now says this.
