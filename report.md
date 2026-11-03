@@ -71,3 +71,29 @@ Failing tests: identical to master
 - `javax.mail implementation: file:.../com/sun/mail/jakarta.mail/1.6.8/jakarta.mail-1.6.8.jar`
 - `without timeouts: still blocked after 12005 ms`
 - `with timeouts: failed after 2006 ms: java.net.SocketTimeoutException: Read timed out`
+
+## Merge mit master 03.11.
+
+Merge-Commit: fdfb55f62 (Eltern 4216d4264 und upstream/master ac2aa7a62), kein Rebase, kein Force-Push.
+
+Konflikt nur in j-lawyer-server/j-lawyer-server-war/src/main/java/com/jdimension/jlawyer/timer/SystemMonitorTask.java, und dort nur im Import-Block: Dieser Branch fügt import com.jdimension.jlawyer.email.CommonMailUtils hinzu (für CommonMailUtils.setSmtpTimeouts in sendMail), 70b84085f (Berechtigungen für Server-Einstellungen) an derselben Stelle import com.jdimension.jlawyer.server.services.settings.ServerSettingsKeys. Beide Importe übernommen. Die übrigen Änderungen von 70b84085f in der Datei (Schlüssel als Konstanten aus ServerSettingsKeys) und der Aufruf von setSmtpTimeouts überschneiden sich nicht und sind unverändert im Ergebnis. SystemManagement.java wurde von git ohne Konflikt zusammengeführt. Gegenüber upstream/master ändert der Merge genau die 6 Dateien dieses Branches mit denselben 719 Zeilen wie vorher gegenüber 7b3b3dfa8, das Verhalten ist unverändert, pr.md bleibt wie es ist.
+
+Build (Stand fdfb55f62, gestartet 03.11.2026 20:47 UTC, Ubuntu OpenJDK 17.0.20 mit OpenJFX 17.0.9, Maven 3.9.11):
+
+```
+mvn -B -ntp -pl j-lawyer-server/j-lawyer-server-war -am -Dmaven.test.failure.ignore=true -Dmaven.compiler.release= -Dmaven.compiler.source=17 -Dmaven.compiler.target=17 clean package
+```
+
+Ergebnis: BUILD SUCCESS, alle Module des Reactors bauen (mit -am auch j-lawyer-server-ejb).
+
+| Modul | Tests | fehlgeschlagen | übersprungen |
+|---|---|---|---|
+| j-lawyer-cloud | 4 | 0 | 0 |
+| j-lawyer-fax | 23 | 0 | 0 |
+| j-lawyer-server-common | 115 | 17 | 0 |
+| j-lawyer-server-entities | 56 | 0 | 0 |
+| j-lawyer-server/j-lawyer-server-ejb | 841 | 1 | 16 |
+| j-lawyer-server/j-lawyer-server-war | 5 | 4 | 0 |
+| gesamt | 1044 | 22 | 16 |
+
+Mehr Tests als im Build vom 02.11. (1022), die zusätzlichen kommen aus den neuen Commits von master. Die 22 fehlgeschlagenen Tests sind genau dieselben wie im Build vom 02.11. und auf master 7b3b3dfa8 (FtpTest, SftpTest und SmbTest ohne Server, LibreOfficeODFTest#setReplaceEmptyLine, BackupExecutorTest, FileNameEncodingTest und SyncTest), siehe Build and tests oben. master ac2aa7a62 selbst wurde nicht gebaut.
