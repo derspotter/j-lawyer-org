@@ -1,9 +1,24 @@
 # Report #3407: Dateinamen beim Kopieren/Verschieben beibehalten
 
 - Branch: `fix/3407-keep-file-names-copy-move` (ursprüngliche Basis: upstream/master 7b3b3dfa8, am 03.11. mit master 4dc03980f zusammengeführt)
-- Commits: `1f4955c` (Feature), `2c94a25` (Review-Punkte 02.11.), `f1b7eb1` (Merge von master 4dc03980f), Head `f1b7eb1`
-- Autor aller drei Commits: derspotter <jayjag@posteo.de>, Co-Authored-By Claude
-- Status: Review-Punkte 1 und 3 umgesetzt, Punkt 2 beantwortet (siehe unten). Bereit für erneuten Codex-Review und lokalen Liberica-Build.
+- Commits: `1f4955c` (Feature), `2c94a25` (Review-Punkte 02.11.), `f1b7eb1` (Merge von master 4dc03980f), `3b2cbfd` (Namensprüfung im Hintergrund, Review 03.11.), Head `3b2cbfd`
+- Autor aller Commits: derspotter <jayjag@posteo.de>, Co-Authored-By Claude
+- Status: Review 03.11. umgesetzt (siehe "Antwort auf Review 03.11."). Bereit für erneuten Codex-Review und lokalen Liberica-Build.
+
+## Antwort auf Review 03.11.
+
+### [P2] Prüfung blockiert weiterhin den EDT: umgesetzt
+In `3b2cbfd` laufen die Serverabfragen für die Namen aller Dokumente in einem Hintergrund-Thread. Neue Hilfsmethode `ThreadUtils.callWithProgressIndicator(owner, text, Callable)`: startet die Aufgabe in einem Thread, zeigt währenddessen den bestehenden modalen `ProgressIndicator` (wie bei den ProgressableActions der App), gibt das Ergebnis zurück bzw. wirft die Exception der Aufgabe weiter. Der Indikator wird per `invokeLater` innerhalb seiner eigenen modalen Schleife geschlossen, also immer erst nachdem er angezeigt wurde. Das Fenster zeichnet währenddessen neu, andere Eingaben sind durch den modalen Indikator gesperrt (kein erneutes Starten derselben Aktion).
+Die Konfliktdialoge bleiben im EDT. Ein im Konfliktdialog eingegebener Name wird einzeln geprüft (ein Aufruf nach einer Benutzereingabe), Namen, die schon in der Hintergrund-Prüfung waren, nicht noch einmal.
+Geprüft unter Xvfb mit einem Scratch-Programm, drei Durchläufe, alle gleich: die Aufgabe läuft nicht im EDT, ein javax.swing.Timer im EDT tickt während einer Aufgabe von 1,5 s 16 mal (der EDT ist also nicht blockiert), eine IOException der Aufgabe kommt beim Aufrufer an, 30 sofort fertige Aufgaben kehren alle zurück (kein Hängen der modalen Schleife). Kein committeter Test, weil der Indikator ein Fenster braucht und die Tests headless laufen.
+Nicht geändert: das Kopieren bzw. Verschieben selbst läuft wie vor diesem PR im EDT.
+Das Wort "kurz" in pr.md ist entfernt, die Dauer ist nicht gemessen.
+
+### [P2] Konflikt mit master in FileUtils.java: bereits erledigt
+Der Review lief noch gegen `2c94a25`. Seit `f1b7eb1` (03.11.) ist master 4dc03980f per Merge enthalten. Auflösung wie im Review vorgeschlagen: zuerst `dialog.dispose()` und die verzögerte Reaktivierung des Besitzerfensters aus bc3a1497b, danach die Rückgabe bei `escapeCancels`. Escape, Abbrechen und OK danach erneut unter Xvfb geprüft (siehe unten). `git merge-tree` von Head `3b2cbfd` gegen master: Exit 0.
+
+### Build Head `3b2cbfd`
+Gleicher Befehl wie unten. 272 ausgeführt, 17 fehlgeschlagen (FtpTest 6, SftpTest 6, SmbTest 5), 0 Fehler, 0 übersprungen. Client 85 ausgeführt, 0 fehlgeschlagen.
 
 ## Antwort auf Review 02.11.
 
