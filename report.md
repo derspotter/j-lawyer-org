@@ -2,6 +2,7 @@
 
 - Branch: `fix/2658-bea-zaehler-alle-postfaecher` (fork derspotter/j-lawyer-org), base upstream/master 7b3b3dfa8
 - Commits (newest first):
+  - 4b7600b07 derspotter <jayjag@posteo.de> | fix(bea): Zähler ungelesener beA-Nachrichten bleibt auch stehen, wenn für ein Postfach kein Posteingang gefunden wird. Refs #2658
   - b8ddd7fa7 derspotter <jayjag@posteo.de> | fix(bea): Zähler ungelesener beA-Nachrichten bleibt auch stehen, wenn die Ordner nur eines Postfachs nicht geladen werden können, Veröffentlichung des Zählers getestet. Refs #2658
   - 9115c58bf derspotter <jayjag@posteo.de> | fix(bea): Zähler ungelesener beA-Nachrichten behält seinen Wert, wenn die Postfächer nicht gezählt werden können. Refs #2658
   - 927ebfd64 derspotter <jayjag@posteo.de> | fix(bea): Zähler ungelesener beA-Nachrichten summiert alle Postfächer statt nur das zuletzt geprüfte. Refs #2658
@@ -11,14 +12,14 @@
 | File | + | - |
 |---|---|---|
 | `j-lawyer-client/src/main/java/com/jdimension/jlawyer/client/bea/BeaCheckTimerTask.java` | 2 | 1 |
-| `j-lawyer-client/src/main/java/com/jdimension/jlawyer/client/bea/BeaInboxPanel.java` | 8 | 18 |
-| `j-lawyer-client/src/main/java/com/jdimension/jlawyer/client/bea/BeaUnreadCounter.java` | 743 | 0 |
-| `j-lawyer-client/src/test/java/com/jdimension/jlawyer/client/bea/BeaUnreadCounterTest.java` | 789 | 0 |
-| total | 1542 | 19 |
+| `j-lawyer-client/src/main/java/com/jdimension/jlawyer/client/bea/BeaInboxPanel.java` | 6 | 18 |
+| `j-lawyer-client/src/main/java/com/jdimension/jlawyer/client/bea/BeaUnreadCounter.java` | 749 | 0 |
+| `j-lawyer-client/src/test/java/com/jdimension/jlawyer/client/bea/BeaUnreadCounterTest.java` | 803 | 0 |
+| total | 1560 | 19 |
 
-## Build and tests (03.11.2026)
+## Build and tests
 
-JDK: Ubuntu OpenJDK 17.0.20 + OpenJFX 17.0.9 from Maven Central, combined with jlink. Maven 3.9.11. Branch and master 7b3b3dfa8 built with the identical command in the same container (master in a separate worktree):
+JDK: Ubuntu OpenJDK 17.0.20 + OpenJFX 17.0.9 from Maven Central, combined with jlink. Maven 3.9.11. Branch at commit 4b7600b07 built (started 03.11.2026 09:37 UTC) and master 7b3b3dfa8 built (02.11.2026, in a separate worktree) with the identical command in the same container:
 
 ```
 mvn -B -ntp -pl j-lawyer-client -am -Dmaven.test.failure.ignore=true -Dmaven.compiler.release= -Dmaven.compiler.source=17 -Dmaven.compiler.target=17 clean package
@@ -26,12 +27,12 @@ mvn -B -ntp -pl j-lawyer-client -am -Dmaven.test.failure.ignore=true -Dmaven.com
 
 | Module | branch total / executed / skipped / failed | master total / executed / skipped / failed |
 |---|---|---|
-| j-lawyer-client | 89 / 89 / 0 / 0 | 81 / 81 / 0 / 0 |
+| j-lawyer-client | 91 / 91 / 0 / 0 | 81 / 81 / 0 / 0 |
 | j-lawyer-cloud | 4 / 4 / 0 / 0 | 4 / 4 / 0 / 0 |
 | j-lawyer-fax | 23 / 23 / 0 / 0 | 23 / 23 / 0 / 0 |
 | j-lawyer-server-common | 104 / 104 / 0 / 17 | 104 / 104 / 0 / 17 |
 | j-lawyer-server-entities | 56 / 56 / 0 / 0 | 56 / 56 / 0 / 0 |
-| total | 276 / 276 / 0 / 17 | 268 / 268 / 0 / 17 |
+| total | 278 / 278 / 0 / 17 | 268 / 268 / 0 / 17 |
 
 Failing tests: identical to master
 
@@ -67,3 +68,10 @@ Failing tests: identical to master
 
 ## Evidence 03.11.
 - `BeaUnreadCounterTest`: plain javac + JUnit 4.12 against the module classes of this worktree, headless, 8 of 8 pass.
+
+## Antwort auf Review 03.11. (2)
+1. [P2] Missing inbox without an exception: agreed, fixed in 4b7600b07. `countUnread()` and `publishUnread()` take the number of postboxes again (as on 02.11.) and return null, without publishing, as soon as fewer inboxes were found than there are postboxes, whatever the reason: the folders could not be loaded (exception) or were loaded but contain no folder of type `TYPE_INBOX`. `refreshFolders()` passes `inboxes.size()`, the separate failure counter of b8ddd7fa7 is gone again because a failed postbox simply has no entry in the inbox map. With b8ddd7fa7, `countUnread(0, {lawyer1: empty inbox}, ...)` for two postboxes returned 0 when lawyer2 had no inbox and no exception was raised. New tests `testPostboxWithoutInboxFolder` (one of two postboxes without an entry, and with a null entry) and `testNoPostboxHasAnInboxFolder`, and `testPublishesNothingIfTheCountIsUnknown` now covers "no inbox for one of two postboxes" via the real `EventBroker`.
+2. [P3] pr.md wording: agreed, it now says "Der zuletzt ermittelte Wert bleibt stehen und kann veraltet sein."
+
+## Evidence 03.11. (2)
+- `BeaUnreadCounterTest`: plain javac + JUnit 4.12 against the module classes of this worktree, headless, 10 of 10 pass. The reactor build below includes it.
