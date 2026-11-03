@@ -2,6 +2,7 @@
 
 - Branch: `fix/2592-restore-mariadb-collation` (fork derspotter/j-lawyer-org), base upstream/master 7b3b3dfa8
 - Commits (newest first):
+  - 8932d6b1b derspotter <jayjag@posteo.de> | fix(backup): Wiederherstellung bereitet die angepasste Datenbanksicherung vor dem Löschen des Datenverzeichnisses vor und lässt die Sicherung unverändert, nur der Eigentümer kann die Kopie lesen, Kollation nur nach COLLATE und in Kollationsvariablen, offene ausführbare Kommentare und sql_mode in versionsabhängigen Kommentaren verhindern das Ersetzen. Refs #2592
   - 0234d855d derspotter <jayjag@posteo.de> | fix(backup): Ersetzen der Kollation beachtet DELIMITER, SET-Anweisungen im Rumpf von Triggern und Prozeduren ändern den sql_mode nicht mehr. Refs #2592
   - 6b1a9d097 derspotter <jayjag@posteo.de> | fix(backup): Ersetzen der Kollation beachtet NO_BACKSLASH_ESCAPES in Triggern aus der Sicherung, Tests prüfen den Speicherbedarf bei großen Datensätzen. Refs #2592
   - 25b452efb derspotter <jayjag@posteo.de> | fix(backup): Kollation wird nur noch im SQL-Code ersetzt, nicht in Zeichenketten, Bezeichnern und Kommentaren, und die Sicherung wird ohne Zwischenspeichern ganzer Zeilen verarbeitet. Refs #2592
@@ -12,14 +13,14 @@
 
 | File | + | - |
 |---|---|---|
-| `j-lawyer-backupmgr/src/main/java/org/jlawyer/backupmgr/impl/RestoreExecutor.java` | 33 | 0 |
-| `j-lawyer-backupmgr/src/main/java/org/jlawyer/backupmgr/impl/SqlDumpUtils.java` | 1233 | 0 |
-| `j-lawyer-backupmgr/src/test/java/org/jlawyer/test/backupmgr/SqlDumpUtilsTest.java` | 1108 | 0 |
-| total | 2374 | 0 |
+| `j-lawyer-backupmgr/src/main/java/org/jlawyer/backupmgr/impl/RestoreExecutor.java` | 72 | 12 |
+| `j-lawyer-backupmgr/src/main/java/org/jlawyer/backupmgr/impl/SqlDumpUtils.java` | 1336 | 0 |
+| `j-lawyer-backupmgr/src/test/java/org/jlawyer/test/backupmgr/SqlDumpUtilsTest.java` | 1209 | 0 |
+| total | 2617 | 12 |
 
 ## Build and tests
 
-JDK: Ubuntu OpenJDK 17.0.20 + OpenJFX 17.0.9 from Maven Central, combined with jlink. Maven 3.9.11. Branch at commit 0234d855d built (started 03.11.2026 12:54 UTC) and master 7b3b3dfa8 built (02.11.2026, in a separate worktree) with the identical command in the same container:
+JDK: Ubuntu OpenJDK 17.0.20 + OpenJFX 17.0.9 from Maven Central, combined with jlink. Maven 3.9.11. Branch at commit 8932d6b1b built (started 03.11.2026 18:44 UTC) and master 7b3b3dfa8 built (02.11.2026, in a separate worktree) with the identical command in the same container:
 
 ```
 mvn -B -ntp -pl j-lawyer-backupmgr -am -Dmaven.test.failure.ignore=true -Dmaven.compiler.release= -Dmaven.compiler.source=17 -Dmaven.compiler.target=17 clean package
@@ -27,8 +28,8 @@ mvn -B -ntp -pl j-lawyer-backupmgr -am -Dmaven.test.failure.ignore=true -Dmaven.
 
 | Module | branch total / executed / skipped / failed | master total / executed / skipped / failed |
 |---|---|---|
-| j-lawyer-backupmgr | 15 / 15 / 0 / 0 | n/a |
-| total | 15 / 15 / 0 / 0 | 0 / 0 / 0 / 0 |
+| j-lawyer-backupmgr | 21 / 21 / 0 / 0 | n/a |
+| total | 21 / 21 / 0 / 0 | 0 / 0 / 0 / 0 |
 
 Failing tests: identical to master
 
@@ -71,3 +72,28 @@ Failing tests: identical to master
 ## Evidence 03.11. (3)
 - `SqlDumpUtilsTest`: plain javac + JUnit 4.12, 15 of 15 pass. With `SqlDumpUtils` from 6b1a9d097: the three new tests fail (`expected:<3> but was:<4>` twice, `expected:<3> but was:<-1>` once), the other 12 pass.
 - MariaDB 10.11.14: processed dump (3 replacements: column and table of `t`, table of `u`) loads with exit 0. `information_schema.routines` and `information_schema.triggers` show the bodies with `'it''s COLLATE utf8mb4_0900_ai_ci'` (the server normalises the escaped quote), inserting into `t` gives `it's COLLATE utf8mb4_0900_ai_ciit's COLLATE utf8mb4_0900_ai_ci`, `CALL p()` returns both strings.
+
+## Antwort auf Copilot-Review 03.11.
+
+Neue Commits: 8932d6b1b.
+
+Build (Stand 8932d6b1b, gestartet 03.11.2026 18:44 UTC, Ubuntu OpenJDK 17.0.20 mit OpenJFX 17.0.9, Maven 3.9.11):
+
+```
+mvn -B -ntp -pl j-lawyer-backupmgr -am -Dmaven.test.failure.ignore=true -Dmaven.compiler.release= -Dmaven.compiler.source=17 -Dmaven.compiler.target=17 clean package
+```
+
+Ergebnis: BUILD SUCCESS. 21 Tests gesamt, 21 ausgeführt, 0 übersprungen, 0 fehlgeschlagen. Die fehlgeschlagenen Tests sind dieselben wie auf master 7b3b3dfa8 (siehe Build and tests), die neuen Tests bestehen.
+
+Ende-zu-Ende mit MariaDB 10.11.14 und RestoreExecutor.restore() aus diesem Stand: Mit einer MySQL-8-Sicherung werden 2 Stellen ersetzt, die Tabelle hat danach utf8mb4_unicode_ci, Standardwert und Daten mit dem Namen der Kollation sind unverändert, jlawyerdb-dump.sql im Sicherungsverzeichnis ist bytegleich mit dem Original und die Kopie ist danach gelöscht. Blockiert ein Verzeichnis den Namen der Kopie, bricht restore() mit DirectoryNotEmptyException ab, die Datei im Datenverzeichnis ist noch da und die Datenbank wurde nicht angelegt. Welche Formen die Sicherung enthält: IterativeBackupExecutor ruft mysqldump ohne Optionen auf (Tabellen, Ansichten, Trigger, keine Prozeduren), das Schema von j-lawyer hat keine Trigger und Prozeduren. pr.md ist angepasst.
+
+Antworten je Thread:
+
+- PRRT_kwDOCUQTLc6zRFYL: Behoben in 8932d6b1b: Die Datenbanksicherung wird jetzt vor dem Leeren des Datenverzeichnisses ausgepackt und geprüft. Nur wenn der Server die Kollation nicht kennt und die Sicherung sie verwendet (Zählung ohne Schreiben), wird eine angepasste Kopie geschrieben. Scheitert das, bricht die Wiederherstellung ab, bevor etwas gelöscht wird. Mit MariaDB 10.11 durchgespielt: Datenverzeichnis und Datenbank bleiben dann unverändert. Die Sicherung selbst wird nicht mehr verändert, die Kopie wird nach dem Einspielen gelöscht.
+- PRRT_kwDOCUQTLc6zRFZF: Behoben in 8932d6b1b: Kopie und temporäre Datei werden mit den Rechten rw------- angelegt, wo das Dateisystem POSIX-Rechte kennt. Ersetzt replaceCollation eine Datei, übernimmt die neue Datei die Rechte der alten. Tests für beides, der Test für die Rechte schlägt mit dem vorherigen Stand fehl.
+- PRRT_kwDOCUQTLc6zRFZl: Behoben in 8932d6b1b: Die zweite Variante passt nur noch auf collation_connection, collation_server und collation_database, auch mit @@, SESSION oder GLOBAL. Benutzervariablen, Spalten wie NEW.collation und lokale Variablen bleiben unverändert. Neuer Test dazu.
+- PRRT_kwDOCUQTLc6zRFaL: Abgelehnt: Die Sicherung von j-lawyer erstellt mysqldump ohne Optionen, es schreibt Bezeichner in Backticks. Das Schema von j-lawyer enthält keine Trigger und keine Prozeduren, in deren Text ANSI_QUOTES gelten könnte. Ein solcher Fall endet sicher: Die Sicherung gilt als unvollständig, es wird nichts ersetzt, und die Wiederherstellung meldet wie ohne diesen PR den Fehler 1273 des Servers.
+- PRRT_kwDOCUQTLc6zRFa2: Behoben in 8932d6b1b: Ist am Ende der Datei ein ausführbarer Kommentar noch offen, gilt die Sicherung als unvollständig und es wird nichts ersetzt. Neuer Test dazu.
+- PRRT_kwDOCUQTLc6zRFbR: Abgelehnt: mysqldump schreibt die Kollation in SET collation_connection ohne Anführungszeichen. Ein Wert in Anführungszeichen bleibt bewusst unverändert, die Wiederherstellung meldet dann den Fehler 1273 des Servers, statt eine Zeichenkette umzuschreiben.
+- PRRT_kwDOCUQTLc6zRFbv: Behoben in 8932d6b1b, sicher statt nachgebildet: MariaDB 10.11.14 führt /*!50503 und /*M!100100 aus und ignoriert /*!50700 und /*!80000 (geprüft: SELECT 1 /*!50503 +10 */ /*!50700 +100 */ /*!80000 +1000 */ /*M!100100 +10000 */ ergibt 10011). Ändert eine Anweisung in einem Kommentar, den der Zielserver vielleicht ignoriert (ab 50700 oder /*M!), den sql_mode, wird nichts ersetzt. mysqldump schreibt sql_mode nur in /*!40101 und /*!50003, die alle in Frage kommenden Server ausführen. Neuer Test, er schlägt mit dem vorherigen Stand fehl.
+- PRRT_kwDOCUQTLc6zRFcO: Behoben in 8932d6b1b: Kommentare (/* */, -- und #) zwischen COLLATE und dem Namen zählen wie Leerraum, ihr Inhalt bleibt geschützt. Neuer Test dazu.
