@@ -98,3 +98,21 @@ Antworten je Thread:
 
 Prüfung zu PRRT_kwDOCUQTLc6zRD-Z: `AddressService.updateAddress()` liest den gespeicherten Kontakt, übernimmt nur `defaultRole`, setzt lastModifier und modificationDate und ruft `addressFacade.edit(dto)`. `AddressBean.creator` und `creationDate` sind normale `@Column`-Felder (nicht updatable=false), `fillDTO()` setzt sie nicht. Der Code in `save()` und `updateAddress()` stammt laut git blame aus deutlich älteren Commits (jenseits der 2000 Commits im Klon), ist also nicht durch diesen PR entstanden.
 
+## Antwort auf Copilot Runde 2 03.11.
+
+Neuer Commit: `42c60ce73` (Autor derspotter, Co-Authored-By Claude), normaler Push auf `fix/1283-new-contact-after-tag-save`.
+
+Build: `mvn -B -ntp -pl j-lawyer-client -am -Dmaven.test.failure.ignore=true -Dmaven.compiler.release= -Dmaven.compiler.source=17 -Dmaven.compiler.target=17 clean package`
+JDK: Ubuntu OpenJDK 17.0.20 plus OpenJFX 17.0.9 aus Maven Central per jlink (BellSoft-Hosts im Cloud-Proxy gesperrt), deshalb `--release` durch source/target 17 ersetzt.
+Ergebnis: Build läuft durch, weil Testfehler ignoriert werden. Ausgeführt 280, fehlgeschlagen 17 (FtpTest 6, SftpTest 6, SmbTest 5, wie auf master), Fehler 0, übersprungen 0. Client 93 ausgeführt, 0 fehlgeschlagen (AddressPanelClearInputsTest jetzt 4 Tests, EditorsRegistryReselectTest 8).
+
+Tests rot auf dem vorherigen Head: Gegen AddressPanel.java und NewAddressPanel.java aus `bb431f313` schlagen die beiden neuen Tests fehl ("lblAge text kept by clearInputs()" und "method not found: protected void commitEditableComboBoxes()"), gegen `42c60ce73` laufen alle 4 durch (Test einzeln mit javac/JUnitCore gegen beide Quellstände ausgeführt).
+
+Zur Auswahl der Felder: AddressPanel hat 14 editierbare Auswahllisten, alle werden in isDirty() über getSelectedItem() gelesen. 12 davon bekommen in populateOptions() eine Autovervollständigung (SwingX AutoCompleteDecorator). Deren AutoCompleteDocument ruft bei jedem Einfügen und Löschen setSelectedItem() auf (per javap nachgesehen), getippter Text ist dort also schon übernommen. Nur cmbInsurance und cmbMotorInsurance haben keine (addAutoComplete dort auskommentiert). Der Test leitet diese Menge aus dem Quelltext ab, kommt eine weitere solche Liste dazu, schlägt er fehl.
+
+pr.md angepasst: Fix-Punkt zu clearInputs() um den Altershinweis ergänzt, neuer Fix-Punkt zu den Versicherer-Feldern, AddressPanelClearInputsTest jetzt mit 4 Tests, Testzahlen aktualisiert.
+
+Antworten je Thread:
+- PRRT_kwDOCUQTLc6zRzgM: Behoben in 42c60ce: clearInputs() leert jetzt auch Text und Symbol von lblAge (Alter, "verstorben", Symbol für Minderjährige). Ein Quelltext-Test prüft, dass alles, was updateAge() anzeigt, beim Zurücksetzen geleert wird.
+- PRRT_kwDOCUQTLc6zRzg5: Behoben in 42c60ce: isDirty() in AddressPanel und NewAddressPanel übernimmt zuerst den getippten Text der Versicherer-Felder (commitEditableComboBoxes()), Rückfrage und Speichern sehen ihn also auch ohne Fokuswechsel. Die übrigen editierbaren Auswahllisten haben eine Autovervollständigung, die jeden Tastendruck übernimmt. Ein Quelltext-Test prüft das für jede editierbare Liste ohne Autovervollständigung.
+
