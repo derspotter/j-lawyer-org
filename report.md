@@ -1,13 +1,13 @@
 # Report #2544: E-POST Überschrift Einschreiben
 
 - Branch: `fix/2544-epost-einschreiben-label` (Basis: upstream/master 7b3b3dfa8)
-- Commit (Head): `5c026d907` (nach dem Autor-Umschreiben durch den Orchestrator, 02.11.)
-- Status: Code fertig. Autor ist jetzt derspotter (vom Orchestrator umgeschrieben). Offen: die Commit-Nachricht hat noch die alte Formulierung, die der Review vom 01.11. korrigiert haben wollte. Korrigierter Text siehe "Für das Umschreiben".
+- Commit (Head): `06ebc7b70` (Autor und Commit-Nachricht vom Orchestrator umgeschrieben, 03.11., Baum unverändert)
+- Status: fertig. Autor derspotter, Commit-Nachricht korrigiert (beides vom Orchestrator, 03.11.).
 
 ## Nachtrag 01.11.2026 (Codex-Review, Autor)
-- 02.11.: Der Orchestrator hat den Autor auf derspotter umgeschrieben (Head `5c026d907`). Die Commit-Nachricht ist dabei unverändert geblieben und enthält noch die alte Formulierung. Die korrigierte Nachricht steht unten unter "Für das Umschreiben". Ohne Force-Push kann ich sie nicht ändern.
+- 03.11.: Der Orchestrator hat Autor und Commit-Nachricht umgeschrieben (Head `06ebc7b70`, Baum identisch mit dem vorherigen Stand). Damit ist der Nachtrag erledigt.
 - Autor auf `derspotter <jayjag@posteo.de>` umschreiben (amend + `git push --force-with-lease`): in der Cloud-Session vom Auto-Mode-Klassifikator als destruktive Git-Aktion abgelehnt. Nicht umgangen. Der Branch hat deshalb noch den Commit mit Autor Claude.
-- Code unverändert, Head weiterhin `d33d0b1` (Autor Claude). Die Commit-Nachricht sagt noch "die Auswahlliste bleibt an derselben Position". Die Korrektur braucht ein amend und ist deshalb noch offen (Text siehe unten).
+- Code unverändert, Head weiterhin `d33d0b1` (Autor Claude). Die Commit-Nachricht sagt noch "die Auswahlliste bleibt an derselben Position". Erledigt am 03.11. durch den Orchestrator (Text siehe unten).
 - pr.md: `## Verifiziert` nennt jetzt den genauen Befehl inkl. `-Dmaven.test.failure.ignore=true` und Compiler-Overrides, das JDK-Setup und dass der Build nur wegen ignorierter Testfehler durchläuft (einzige fehlschlagende Klassen FtpTest/SftpTest/SmbTest wie auf master). pr.md formuliert die gleiche Position der Auswahlliste jetzt als Beobachtung aus dem headless Layouttest (Standardschrift, Standard-Look-and-Feel), nicht als Zusage.
 
 ### Für das Umschreiben (lokal im Orchestrator)
