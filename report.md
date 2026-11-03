@@ -2,6 +2,7 @@
 
 - Branch: `fix/2460-ablegen-als-datei-ersetzen` (fork derspotter/j-lawyer-org), base upstream/master 7b3b3dfa8
 - Commits (newest first):
+  - 757a6ab74 derspotter <jayjag@posteo.de> | fix(documents): Ersetzen bei „ablegen als“ stellt die Etiketten der bisherigen Datei nach jedem Umbenennen wieder her, eindeutige Zwischennamen auch bei mehreren Ersetzungen in derselben Millisekunde. Refs #2460
   - 7fd94c432 derspotter <jayjag@posteo.de> | fix(documents): Ersetzen bei „ablegen als“ löscht bei Fehlern nichts mehr, die bisherige Datei wird erst nach dem Ersetzen umbenannt in den Papierkorb gelegt, und der tatsächliche Stand aller Dateien wird angezeigt. Refs #2460
   - fba8fc68f derspotter <jayjag@posteo.de> | fix(documents): Ersetzen bei „ablegen als“ ermittelt die zu ersetzende Datei beim Server und prüft ihren Namen vor dem Löschen, Etiketten richten sich nach dem endgültigen Namen, kurzer Zwischenname für lange Dateinamen, Teilfehler werden angezeigt und rückgängig gemacht. Refs #2460
   - a3d57f3ca derspotter <jayjag@posteo.de> | fix(documents): Ersetzen bei „ablegen als“ löscht die vorhandene Datei erst nach erfolgreicher Ablage, beachtet keine Groß- und Kleinschreibung und bricht beim Schließen der Rückfrage ab. Refs #2460
@@ -12,13 +13,13 @@
 | File | + | - |
 |---|---|---|
 | `j-lawyer-client/src/main/java/com/jdimension/jlawyer/client/editors/files/ArchiveFilePanel.java` | 50 | 1 |
-| `j-lawyer-client/src/main/java/com/jdimension/jlawyer/client/editors/files/DocumentReplacement.java` | 981 | 0 |
-| `j-lawyer-client/src/test/java/com/jdimension/jlawyer/client/editors/files/DocumentReplacementTest.java` | 1149 | 0 |
-| total | 2180 | 1 |
+| `j-lawyer-client/src/main/java/com/jdimension/jlawyer/client/editors/files/DocumentReplacement.java` | 1058 | 0 |
+| `j-lawyer-client/src/test/java/com/jdimension/jlawyer/client/editors/files/DocumentReplacementTest.java` | 1216 | 0 |
+| total | 2324 | 1 |
 
 ## Build and tests
 
-JDK: Ubuntu OpenJDK 17.0.20 + OpenJFX 17.0.9 from Maven Central, combined with jlink. Maven 3.9.11. Branch at commit 7fd94c432 built (started 03.11.2026 09:36 UTC) and master 7b3b3dfa8 built (02.11.2026, in a separate worktree) with the identical command in the same container:
+JDK: Ubuntu OpenJDK 17.0.20 + OpenJFX 17.0.9 from Maven Central, combined with jlink. Maven 3.9.11. Branch at commit 757a6ab74 built (started 03.11.2026 12:52 UTC) and master 7b3b3dfa8 built (02.11.2026, in a separate worktree) with the identical command in the same container:
 
 ```
 mvn -B -ntp -pl j-lawyer-client -am -Dmaven.test.failure.ignore=true -Dmaven.compiler.release= -Dmaven.compiler.source=17 -Dmaven.compiler.target=17 clean package
@@ -26,12 +27,12 @@ mvn -B -ntp -pl j-lawyer-client -am -Dmaven.test.failure.ignore=true -Dmaven.com
 
 | Module | branch total / executed / skipped / failed | master total / executed / skipped / failed |
 |---|---|---|
-| j-lawyer-client | 96 / 96 / 0 / 0 | 81 / 81 / 0 / 0 |
+| j-lawyer-client | 98 / 98 / 0 / 0 | 81 / 81 / 0 / 0 |
 | j-lawyer-cloud | 4 / 4 / 0 / 0 | 4 / 4 / 0 / 0 |
 | j-lawyer-fax | 23 / 23 / 0 / 0 | 23 / 23 / 0 / 0 |
 | j-lawyer-server-common | 104 / 104 / 0 / 17 | 104 / 104 / 0 / 17 |
 | j-lawyer-server-entities | 56 / 56 / 0 / 0 | 56 / 56 / 0 / 0 |
-| total | 283 / 283 / 0 / 17 | 268 / 268 / 0 / 17 |
+| total | 285 / 285 / 0 / 17 | 268 / 268 / 0 / 17 |
 
 Failing tests: identical to master
 
@@ -82,3 +83,11 @@ Failing tests: identical to master
 ## Evidence 03.11. (2)
 - `DocumentReplacementTest`: plain javac + JUnit 4.12 against the module classes of this worktree, 15 of 15 pass.
 - Probe with `DocumentReplacement` from fba8fc68f and the same fake server (plus `restoreDocumentFromBin()`, which only resets the deleted flag like the server): failure of the database entry after the file is deleted leaves `old name=Brief.pdf deleted=false file=false` and no new document at all, a failure before that leaves `old ... folder=root invoice=false` for a document that was in a subfolder and linked to an invoice.
+
+## Antwort auf Review 03.11. (3)
+1. [P2] Tags of the original changed for good: agreed, reproduced and fixed in 757a6ab74. Before the original is renamed, its tags (name and value) are read. After renaming it to "Ersetzt_..." and again after renaming it back, `restoreTags()` gives it exactly these tags: tags the rules added are removed, changed values are set back, and a tag that had no value but got one is removed and set again without value (the server keeps an existing value when a tag is set without value). The fake server now models tags with values like `applyAutomatedDocumentTags()` and `setDocumentTag()`. Three rules ("name is not Brief.pdf", "name starts with Ersetzt_ sets Status=ersetzt", "name contains brief") and an original with `Status=offen` and `Mandant` but without the rule tag `Brief` (as if a user had removed it): after a failed replacement (`testRenamingTheNewDocumentFailsAndTheExistingOneGetsItsNameBack`) and after a successful one in the bin (`testReplacedDocumentKeepsItsTags`) the original has exactly `{Status=offen, Mandant=null}`. With 7fd94c432 both tests fail with `{Status=ersetzt, Mandant=null, Sonstiges=null, Brief=null}`. A failure while restoring tags is reported in the message (`testRestoringTagsFails`). Not restored: the date a tag was set, and the history entries of the tag changes.
+2. [P3] Recovery overstated: agreed. pr.md now says that giving the original its name and tags back is attempted and may fail (then it keeps "Ersetzt_..."), that the new document is kept, that a document already deleted from the bin stays deleted, and that the resulting state is read from the server and reported. The earlier commit messages cannot be changed without rewriting history, which the rules exclude. The message of 757a6ab74 only claims what the code does.
+3. Found while testing: two replacements of the same name within one millisecond got the same "Ersetzt_" name, and the second one failed (safely, but needlessly). Both temporary names now use a timestamp that never repeats within the client.
+
+## Evidence 03.11. (3)
+- `DocumentReplacementTest`: plain javac + JUnit 4.12 against the module classes of this worktree, 17 of 17 pass (three runs). With `DocumentReplacement` from 7fd94c432 the three tag tests fail, the other 14 pass.
