@@ -62,37 +62,13 @@ master bekam am 02.11. bc3a1497b (macOS-Menüleiste nach Dateinamen-Dialog, #373
 - Nach dem Merge: `git diff upstream/master` zeigt nur die Änderungen dieses Branches, `git merge-tree` gegen master Exit 0.
 - Nach dem Merge neu gebaut (Tabelle unten, gleiche Zahlen wie vorher) und die Xvfb-Prüfung des Dialogs wiederholt: unverändert (escapeCancels=true + Escape: null, false + Escape: Name, OK: Name, Abbrechen: null).
 
-## Dateien (gegen master 913123ae9, Head b553c97)
-- `SECURITY.md` +0 -83
-- `j-lawyer-client/src/main/java/com/jdimension/jlawyer/client/components/MultiCalDialog.java` +19 -34
+## Dateien (Änderungen des Branches gegen die Merge-Basis 4dc03980f, Head b553c97)
 - `j-lawyer-client/src/main/java/com/jdimension/jlawyer/client/editors/files/ArchiveFilePanel.java` +50 -9
-- `j-lawyer-client/src/main/java/com/jdimension/jlawyer/client/editors/files/CaseAccountEntryPanel.java` +0 -2
 - `j-lawyer-client/src/main/java/com/jdimension/jlawyer/client/utils/FileUtils.java` +75 -0
 - `j-lawyer-client/src/main/java/com/jdimension/jlawyer/client/utils/ThreadUtils.java` +47 -0
-- `j-lawyer-client/src/main/resources/resources/suneditor/suneditor-template.html` +3 -30
 - `j-lawyer-client/src/test/java/org/jlawyer/test/client/utils/FileUtilsTest.java` +72 -0
-- `j-lawyer-server-common/src/main/java/com/jdimension/jlawyer/security/jwt/JwtClaims.java` +0 -12
-- `j-lawyer-server-common/src/main/java/com/jdimension/jlawyer/security/jwt/JwtService.java` +1 -26
-- `j-lawyer-server-common/src/test/java/org/jlawyer/test/jwt/JwtServiceTest.java` +0 -11
-- `j-lawyer-server/j-lawyer-io/src/main/java/org/jlawyer/io/rest/v7/EmailEndpointV7.java` +0 -4
-- `j-lawyer-server/j-lawyer-io/src/main/java/org/jlawyer/io/rest/v8/AuthenticationEndpointV8.java` +14 -39
-- `j-lawyer-server/j-lawyer-io/src/main/java/org/jlawyer/io/rest/v8/DocumentsBinEndpointV8.java` +2 -3
-- `j-lawyer-server/j-lawyer-server-ejb/src/main/java/com/jdimension/jlawyer/services/ArchiveFileService.java` +2 -30
-- `j-lawyer-server/j-lawyer-server-ejb/src/main/java/com/jdimension/jlawyer/services/EmailService.java` +2 -51
-- `j-lawyer-server/j-lawyer-server-ejb/src/main/java/com/jdimension/jlawyer/services/FormsService.java` +4 -49
-- `j-lawyer-server/j-lawyer-server-ejb/src/main/java/com/jdimension/jlawyer/services/InvoiceService.java` +2 -15
-- `j-lawyer-server/j-lawyer-server-ejb/src/main/java/com/jdimension/jlawyer/services/MessagingService.java` +5 -104
-- `j-lawyer-server/j-lawyer-server-ejb/src/main/java/com/jdimension/jlawyer/services/PaymentService.java` +3 -31
-- `j-lawyer-server/j-lawyer-server-ejb/src/main/java/com/jdimension/jlawyer/services/SecurityService.java` +1 -49
-- `j-lawyer-server/j-lawyer-server-ejb/src/main/java/com/jdimension/jlawyer/services/SecurityServiceLocal.java` +0 -11
-- `j-lawyer-web/frontend/public/i18n/de.json` +0 -2
-- `j-lawyer-web/frontend/public/i18n/en.json` +0 -2
-- `j-lawyer-web/frontend/src/app/trash/papierkorb.component.ts` +2 -6
-- `openspec/changes/add-web-client/design.md` +0 -19
-- `openspec/changes/add-web-client/specs/web-client/spec.md` +0 -16
-- `openspec/changes/add-web-client/tasks.md` +0 -2
 
-Gesamt: 28 files changed, 304 insertions(+), 640 deletions(-).
+Gesamt: 4 files changed, 244 insertions(+), 9 deletions(-).
 
 ## Build und Tests
 Befehl: `mvn -B -ntp -pl j-lawyer-client -am -Dmaven.test.failure.ignore=true -Dmaven.compiler.release= -Dmaven.compiler.source=17 -Dmaven.compiler.target=17 clean package`
