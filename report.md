@@ -2,6 +2,7 @@
 
 - Branch: `fix/2592-restore-mariadb-collation` (fork derspotter/j-lawyer-org), base upstream/master 7b3b3dfa8
 - Commits (newest first):
+  - 63669b13f derspotter <jayjag@posteo.de> | fix(backup): sql_mode und collation_ zählen nur im SQL-Code, nicht in Bezeichnern, Zeichenketten und Kommentaren. In Tabellendaten machen COLLATE außerhalb einer Zeichenkette und eine zweite Anweisung das Ergebnis unsicher. Zwischen den DELIMITER-Zeilen wird nur ein Trigger angenommen, wie mysqldump ihn schreibt, seine Zeichenketten werden über Zeilen hinweg im Modus des Triggers gelesen. Eine unvollständige letzte Anweisung macht das Ergebnis unsicher. Refs #2592
   - ca95debb9 derspotter <jayjag@posteo.de> | fix(backup): Kollation wird nur in Sicherungen von mysqldump mit Standardoptionen ersetzt. sql_mode nur mit Modi, die Zeichenketten nicht anders lesen, NO_BACKSLASH_ESCAPES nur direkt um einen Trigger, ein Trigger endet erst nach einer Zeile mit doppeltem Semikolon, Tabellendaten werden Zeile für Zeile geprüft, eine Zeile mit einem Qualifier am Ende macht das Ergebnis unsicher, und die Datenbanksicherung wird nur aus ihrem eigenen Archiv ausgepackt. Refs #2592
   - 82d2b1497 derspotter <jayjag@posteo.de> | fix(backup): Kollation wird nur noch in den Zeilen ersetzt, die mysqldump schreibt (SET-Anweisungen, COLLATE in CREATE TABLE und Views), andere SQL mit sql_mode, Kollationsvariablen oder der Kollation an anderer Stelle bricht die Wiederherstellung vor dem Löschen ab. Die Datenbanksicherung wird in ein neues Verzeichnis ausgepackt, eine alte Sicherung kann nicht mehr verwendet werden, und die Prüfung vor dem Löschen beachtet Groß- und Kleinschreibung nicht. Refs #2592
   - 7088e5caa derspotter <jayjag@posteo.de> | fix(backup): Kollation wird nicht ersetzt, wenn sql_mode in einem versionsabhängigen Teil einer Anweisung, ANSI_QUOTES oder Kollationsvariablen in Triggern oder Prozeduren das Ergebnis unsicher machen, dann bricht die Wiederherstellung vor dem Löschen ab, ebenso bei Fehlern beim Auspacken der Datenbanksicherung. Refs #2592
@@ -17,14 +18,14 @@
 | File | + | - |
 |---|---|---|
 | `j-lawyer-backupmgr/src/main/java/org/jlawyer/backupmgr/impl/RestoreExecutor.java` | 102 | 12 |
-| `j-lawyer-backupmgr/src/main/java/org/jlawyer/backupmgr/impl/SqlDumpUtils.java` | 1248 | 0 |
+| `j-lawyer-backupmgr/src/main/java/org/jlawyer/backupmgr/impl/SqlDumpUtils.java` | 1304 | 0 |
 | `j-lawyer-backupmgr/src/test/java/org/jlawyer/test/backupmgr/RestorePreparationTest.java` | 757 | 0 |
-| `j-lawyer-backupmgr/src/test/java/org/jlawyer/test/backupmgr/SqlDumpUtilsTest.java` | 1031 | 0 |
-| total | 3138 | 12 |
+| `j-lawyer-backupmgr/src/test/java/org/jlawyer/test/backupmgr/SqlDumpUtilsTest.java` | 1074 | 0 |
+| total | 3237 | 12 |
 
 ## Build and tests
 
-JDK: Ubuntu OpenJDK 17.0.20 + OpenJFX 17.0.9 from Maven Central, combined with jlink. Maven 3.9.11. Branch at commit ca95debb9 built (started 03.11.2026 20:42 UTC) and master 7b3b3dfa8 built (02.11.2026, in a separate worktree) with the identical command in the same container:
+JDK: Ubuntu OpenJDK 17.0.20 + OpenJFX 17.0.9 from Maven Central, combined with jlink. Maven 3.9.11. Branch at commit 63669b13f built (started 03.11.2026 21:47 UTC) and master 7b3b3dfa8 built (02.11.2026, in a separate worktree) with the identical command in the same container:
 
 ```
 mvn -B -ntp -pl j-lawyer-backupmgr -am -Dmaven.test.failure.ignore=true -Dmaven.compiler.release= -Dmaven.compiler.source=17 -Dmaven.compiler.target=17 clean package
@@ -32,8 +33,8 @@ mvn -B -ntp -pl j-lawyer-backupmgr -am -Dmaven.test.failure.ignore=true -Dmaven.
 
 | Module | branch total / executed / skipped / failed | master total / executed / skipped / failed |
 |---|---|---|
-| j-lawyer-backupmgr | 14 / 14 / 0 / 0 | n/a |
-| total | 14 / 14 / 0 / 0 | 0 / 0 / 0 / 0 |
+| j-lawyer-backupmgr | 20 / 20 / 0 / 0 | n/a |
+| total | 20 / 20 / 0 / 0 | 0 / 0 / 0 / 0 |
 
 Failing tests: identical to master
 
@@ -260,3 +261,69 @@ Endgültige Antworten je Thread:
 - PRRT_kwDOCUQTLc6zRFaL: Behoben in 7088e5caa, 82d2b1497 und ca95debb9: sql_mode wird nur in SET-Anweisungen wie denen von mysqldump akzeptiert, mit genau einem Literal aus einer festen Liste von Modi, die Zeichenketten, Bezeichner und Kommentare nicht anders lesen lassen. ANSI_QUOTES und die Sammelmodi, die es enthalten (ANSI, DB2, MAXDB, MSSQL, ORACLE, POSTGRESQL), stehen nicht in der Liste, ebenso jeder unbekannte Modus. Jede andere Zeile, die sql_mode erwähnt, macht das Ergebnis ebenfalls unsicher und es wird nichts ersetzt. Meldet der Zielserver die Kollation als unbekannt und enthält die Sicherung ihren Namen, bricht die Wiederherstellung dann vor dem Löschen ab. Kennt der Zielserver die Kollation, wird die Sicherung unverändert eingespielt wie ohne diesen PR.
 - PRRT_kwDOCUQTLc6zRFbv: Behoben in 82d2b1497 und ca95debb9, ohne Versionen nachzubilden: sql_mode darf nur auf Modi aus dieser Liste gesetzt und nur aus einer Variablen wiederhergestellt werden, deren Name sql_mode enthält (wie @OLD_SQL_MODE und @saved_sql_mode bei mysqldump), jede andere Zeile mit sql_mode macht das Ergebnis unsicher. NO_BACKSLASH_ESCAPES ist nur als Modus eines Triggers erlaubt, genau so, wie mysqldump ihn schreibt (direkt vor dem Trigger gesetzt und direkt danach wiederhergestellt), und der Rumpf eines Triggers wird nie geändert. Damit hängt das Lesen von Zeichenketten außerhalb von Triggern nicht davon ab, welche versionsabhängigen Kommentare der Zielserver ausführt. Für ausführbare Kommentare gilt nur noch, dass eine Zeichenkette darin das Kommentarende nicht enthalten darf. Das Beispiel aus dem Review ist unsicher. Meldet der Zielserver die Kollation als unbekannt und enthält die Sicherung ihren Namen, bricht die Wiederherstellung dann vor dem Löschen ab.
 - PRRT_kwDOCUQTLc6zRFbR und PRRT_kwDOCUQTLc6zRFcO: Die Ergänzungen aus Runde 3 gelten unverändert, kein neuer Text nötig.
+
+## Antwort auf Codex 03.11. (Runde 5)
+
+Neuer Commit: 63669b13f (auf ca95debb9).
+
+Build (Stand 63669b13f, gestartet 03.11.2026 21:47 UTC, Ubuntu OpenJDK 17.0.20 mit OpenJFX 17.0.9, Maven 3.9.11):
+
+```
+mvn -B -ntp -pl j-lawyer-backupmgr -am -Dmaven.test.failure.ignore=true -Dmaven.compiler.release= -Dmaven.compiler.source=17 -Dmaven.compiler.target=17 clean package
+```
+
+Ergebnis: BUILD SUCCESS. 20 Tests gesamt (SqlDumpUtilsTest 17 Testmethoden, RestorePreparationTest 3), 20 ausgeführt, 0 übersprungen, 0 fehlgeschlagen. Keine fehlgeschlagenen Tests, wie auf master 7b3b3dfa8. Mit ca95debb9 schlagen die 6 neuen Tests fehl, einer je Punkt: testSettingNamesInIdentifiersAndComments (1), testCollateInTableData (2), testOneStatementPerLineOfTableData (3a), testOnlyTriggersBetweenDelimiters (3b), testStringsInTriggers (5), testIncompleteStatementAtTheEnd (6).
+
+Die Punkte:
+
+1. (P2 #4) sql_mode und collation_ werden nur noch im SQL-Code gesucht, nachdem Zeichenketten, Bezeichner in Backticks und Kommentare ausgeblendet sind. Damit das Gegenbeispiel aus Runde 2 mit sql_mode in Backticks als Ziel von SET unsicher bleibt, ist eine SET-Anweisung am Anfang einer Anweisung, die nicht der Form von mysqldump entspricht und einen Bezeichner in Backticks enthält, unsicher. Die beiden Beispiele aus dem Review (Spalte sql_mode, Spaltenkommentar mit sql_mode) werden jetzt ersetzt, der Test hat dazu noch collation_connection im Kommentar.
+2. (P1 #2) In Tabellendaten ist das Wort COLLATE außerhalb einer Zeichenkette unsicher, egal was folgt. Getestet mit dem Namen in Anführungszeichen (Beispiel aus dem Review) und mit einer anderen Kollation.
+3. (P1 #3a) In Tabellendaten darf nach einem Semikolon außerhalb einer Zeichenkette nur noch Leerraum folgen, eine zweite Anweisung in der Zeile ist unsicher. Erstes Beispiel aus dem Review.
+4. (P1 #3b) Die Zeile nach DELIMITER mit doppeltem Semikolon muss der Kopf eines Triggers sein, wie mysqldump ihn schreibt: /*!50003 CREATE*/, optional /*!50017 DEFINER=…*/, dann /*!50003 TRIGGER. Sonst unsicher. Zweites Beispiel aus dem Review.
+5. (P1 #1) Im Trigger werden Zeichenketten über Zeilen hinweg verfolgt, mit derselben Funktion wie in den übrigen Zeilen (closingQuote, jetzt mit Anfangsposition und Schalter für Backslash-Maskierung), unter NO_BACKSLASH_ESCAPES ohne Backslash-Maskierung. Kommentare mit -- und # werden dabei erkannt. Der Trigger endet an einer Zeile, die außerhalb einer Zeichenkette auf */ und doppeltes Semikolon endet, danach muss genau DELIMITER mit einfachem Semikolon folgen, sonst unsicher. Endet die Sicherung im Trigger (auch in einer Zeichenkette), ist das Ergebnis unsicher. Die Regel zum Namen der Kollation im Trigger bleibt. Abweichung von der Vorgabe: Das Ende ist nicht nur END */ mit doppeltem Semikolon, denn bei Triggern ohne BEGIN … END schreibt mysqldump die ganze Anweisung in eine Zeile, die mit */ und doppeltem Semikolon endet (beide Trigger der echten Sicherungen unten). END */ mit doppeltem Semikolon ist darin enthalten. Das Beispiel aus dem Review ist unsicher. Ein Trigger mit Zeilen mit doppeltem Semikolon, DELIMITER und */ in einer Zeichenkette wird angenommen.
+6. (P3 #5) Endet die Sicherung mit einer unvollständigen Anweisung (die letzte Anweisung endet nicht mit Semikolon), ist das Ergebnis unsicher. Eine Zeile. Beispiel aus dem Review.
+7. (P3 #6) pr.md nennt jetzt 17 Testmethoden in SqlDumpUtilsTest und 3 in RestorePreparationTest. Die Zeile zur Unsicherheit (früher pr.md:17) nennt die neuen Fälle, Fix beschreibt die Regeln für Tabellendaten und Trigger neu.
+
+Ende-zu-Ende mit den echten Sicherungen aus Runde 4 (MySQL 8.0.46 mit Ansicht, trg_plain und trg_nbe unter NO_BACKSLASH_ESCAPES, gesichert mit mysqldump von MySQL 8.0.46 und von MariaDB 10.11.14), eingespielt mit RestoreExecutor.restore() in MariaDB 10.11.14 mit den Klassen dieses Stands (der Amend vor dem Build betraf nur Javadoc):
+
+```
+MySQL-8-mysqldump       24 Ersetzungen, 39 INSERT-Anweisungen identisch mit der Quelle, 102 Tabellen und Ansichten, Ansicht 1, trg_nbe mit NO_BACKSLASH_ESCAPES, trg_plain, keine Tabelle und Spalte mit 0900
+MariaDB-mysqldump       24 Ersetzungen, 39 INSERT-Anweisungen identisch mit der Quelle, 102 Tabellen und Ansichten, Ansicht 1, trg_nbe mit NO_BACKSLASH_ESCAPES, trg_plain, keine Tabelle und Spalte mit 0900
+trg_nbe nach dem Einspielen   INSERT mit abc ergibt Länge 4, letztes Zeichen Backslash (92)
+ANSI                    Abbruch (Kollation nicht sicher ersetzbar)
+Trigger mit ANSI_QUOTES Abbruch (Kollation nicht sicher ersetzbar)
+INSERT mit COLLATE      Abbruch (Kollation nicht sicher ersetzbar)
+DELIMITER im Trigger    Abbruch (Kollation nicht sicher ersetzbar)
+Qualifier am Zeilenende Abbruch (Kollation nicht sicher ersetzbar)
+nur in older.zip        Abbruch (Datenbanksicherung nicht vollständig ausgepackt)
+```
+
+In allen Abbruchfällen bleiben Datenverzeichnis (archivefiles/case1/brief.pdf) und e2erestore (103 Tabellen samt e2e_marker mit 42) unverändert, kein jlawyerdb-restore-… bleibt zurück. Hinweis: Der erste Lauf dieser Runde fand MariaDB und MySQL nicht laufend (der Container war neu gestartet). Dann scheitert die Prüfung der Kollation und die Sicherung wird wie bisher unverändert eingespielt, was die Testverzeichnisse geleert hat. Das ist das dokumentierte Verhalten ohne erreichbaren Server und betraf nur Testdaten. Nach dem Neustart beider Server wurde alles wiederholt, die Ergebnisse oben sind aus diesem Lauf.
+
+numstat gegen master 7b3b3dfa8:
+
+```
+                                  vorher ca95debb9   nachher 63669b13f
+RestoreExecutor.java              +102 -12           +102 -12
+SqlDumpUtils.java (neu)           +1248              +1304
+RestorePreparationTest.java (neu) +757               +757
+SqlDumpUtilsTest.java (neu)       +1031              +1074
+gesamt                            +3138 -12          +3237 -12
+ohne Lizenzkopf (662 Zeilen je neuer Datei)
+Code                              688                744
+Tests                             464                507
+zusammen                          1152               1251
+```
+
+Diff von ca95debb9 auf 63669b13f: 133 Zeilen hinzu, 34 entfernt.
+
+pr.md ist angepasst: Fix beschreibt die Regeln für Tabellendaten (COLLATE, eine Anweisung je Zeile) und Trigger (Kopf von mysqldump, Zeichenketten im Modus des Triggers, Ende). Die Zeile zur Unsicherheit nennt sql_mode und collation_ nur im Code, Backticks in anderen SET-Anweisungen, anderen Inhalt zwischen den DELIMITER-Zeilen, Trigger, die in einer Zeichenkette enden oder ohne DELIMITER-Zeile danach, und eine unvollständige letzte Anweisung. Verifiziert nennt 17 und 3 Testmethoden, die Tests aus Runde 5 und die Fehlschläge mit ca95debb9. Nicht abgedeckt nennt Kommentare /* … */ mit einem einzelnen Anführungszeichen im Rumpf eines Triggers.
+
+Antworten je Thread:
+
+- PRRT_kwDOCUQTLc6zRFYL: unverändert (Text aus Runde 4).
+- PRRT_kwDOCUQTLc6zRFZF: unverändert (Text aus Runde 4).
+- PRRT_kwDOCUQTLc6zRFZl: Behoben in 82d2b1497, ca95debb9 und 63669b13f: Der Wert einer collation_-Variable wird nur in SET-Anweisungen ersetzt, die am Anfang einer Anweisung stehen und nur aus einfachen Zuweisungen bestehen, wie mysqldump sie schreibt. Steht collation_ im SQL-Code einer anderen Zeile (nicht in einem Bezeichner, einer Zeichenkette oder einem Kommentar), steht der Name der Kollation an einer anderen Stelle als nach COLLATE oder endet eine Zeile mit einem Qualifier (t. vor einer Spalte in der nächsten Zeile), wird nichts ersetzt. Die Wiederherstellung bricht dann vor dem Löschen ab, wenn der Zielserver die Kollation als unbekannt meldet und die Sicherung ihren Namen enthält. Sonst wird die Sicherung unverändert eingespielt.
+- PRRT_kwDOCUQTLc6zRFaL: Behoben in 7088e5caa, 82d2b1497, ca95debb9 und 63669b13f: sql_mode wird nur in SET-Anweisungen wie denen von mysqldump akzeptiert, mit genau einem Literal aus einer festen Liste von Modi, die Zeichenketten, Bezeichner und Kommentare nicht anders lesen lassen. ANSI_QUOTES und die Sammelmodi, die es enthalten (ANSI, DB2, MAXDB, MSSQL, ORACLE, POSTGRESQL), stehen nicht in der Liste, ebenso jeder unbekannte Modus. sql_mode im SQL-Code jeder anderen Zeile, auch in Backticks in einer anderen SET-Anweisung und als zweite Anweisung in einer Zeile mit Tabellendaten, macht das Ergebnis ebenfalls unsicher und es wird nichts ersetzt. Meldet der Zielserver die Kollation als unbekannt und enthält die Sicherung ihren Namen, bricht die Wiederherstellung dann vor dem Löschen ab. Kennt der Zielserver die Kollation, wird die Sicherung unverändert eingespielt wie ohne diesen PR.
+- PRRT_kwDOCUQTLc6zRFbv: Behoben in 82d2b1497, ca95debb9 und 63669b13f, ohne Versionen nachzubilden: sql_mode darf nur auf Modi aus dieser Liste gesetzt und nur aus einer Variablen wiederhergestellt werden, deren Name sql_mode enthält (wie @OLD_SQL_MODE und @saved_sql_mode bei mysqldump), sql_mode im SQL-Code jeder anderen Zeile macht das Ergebnis unsicher. NO_BACKSLASH_ESCAPES ist nur als Modus eines Triggers erlaubt, genau so, wie mysqldump ihn schreibt (direkt vor dem Trigger gesetzt und direkt danach wiederhergestellt). Zwischen den DELIMITER-Zeilen wird nur ein Trigger von mysqldump angenommen, seine Zeichenketten werden über Zeilen hinweg in seinem Modus gelesen, und er wird nie geändert. Damit hängt das Lesen von Zeichenketten außerhalb von Triggern nicht davon ab, welche versionsabhängigen Kommentare der Zielserver ausführt. Für ausführbare Kommentare gilt nur noch, dass eine Zeichenkette darin das Kommentarende nicht enthalten darf. Meldet der Zielserver die Kollation als unbekannt und enthält die Sicherung ihren Namen, bricht die Wiederherstellung dann vor dem Löschen ab.
+- PRRT_kwDOCUQTLc6zRFbR und PRRT_kwDOCUQTLc6zRFcO: unverändert (Ergänzungen aus Runde 3).
