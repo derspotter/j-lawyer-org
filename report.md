@@ -29,7 +29,7 @@ Tests: die Rückfrage läuft jetzt über das package-private Feld `EditorsRegist
 | j-lawyer-client | 89 | 0 | 0 | 0 |
 | Summe | 276 | 17 | 0 | 0 |
 
-Die 17 Fehlschläge sind FtpTest (6), SftpTest (6), SmbTest (5), wie auf master. Der Branch basiert weiter auf master 7b3b3dfa8, `git merge-tree` gegen den aktuellen master 4dc03980f ist konfliktfrei (geprüft am 03.11. für 8fde5cd).
+Die 17 Fehlschläge sind FtpTest (6), SftpTest (6), SmbTest (5), wie auf master. Der Branch basiert weiter auf master 7b3b3dfa8, `git merge-tree` gegen den aktuellen master 4dc03980f ist konfliktfrei (geprüft am 03.11. für 8fde5cd und für 729e3a1).
 
 ## Nachtrag 01.11.2026 (Codex-Review, Autor)
 - 02.11.: Der Orchestrator hat den Autor auf derspotter umgeschrieben (Head `8fde5cda0`). Damit ist der Nachtrag vom 01.11. für diesen Branch erledigt.
