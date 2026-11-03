@@ -1,8 +1,8 @@
 # Report #3407: Dateinamen beim Kopieren/Verschieben beibehalten
 
-- Branch: `fix/3407-keep-file-names-copy-move` (Basis: upstream/master 7b3b3dfa8)
-- Commits: `1f4955c` (Feature), `2c94a25` (Review-Punkte 02.11.), Head `2c94a25de76d38209398754ea6a9b7acdbaeacc2`
-- Autor beider Commits: derspotter <jayjag@posteo.de>, Co-Authored-By Claude
+- Branch: `fix/3407-keep-file-names-copy-move` (ursprüngliche Basis: upstream/master 7b3b3dfa8, am 03.11. mit master 4dc03980f zusammengeführt)
+- Commits: `1f4955c` (Feature), `2c94a25` (Review-Punkte 02.11.), `f1b7eb1` (Merge von master 4dc03980f), Head `f1b7eb1`
+- Autor aller drei Commits: derspotter <jayjag@posteo.de>, Co-Authored-By Claude
 - Status: Review-Punkte 1 und 3 umgesetzt, Punkt 2 beantwortet (siehe unten). Bereit für erneuten Codex-Review und lokalen Liberica-Build.
 
 ## Antwort auf Review 02.11.
@@ -27,19 +27,26 @@ Dass ein Abbruch das Kopieren/Verschieben verhindert: `keepFileNames()` liefert 
 ### Punkt 3 (Locale-abhängiges toLowerCase): umgesetzt
 Stimmt. Neu in `2c94a25`: `FileUtils.keepFileNames()` reserviert die Namen eines Vorgangs in einem `TreeSet` mit `String.CASE_INSENSITIVE_ORDER` (zeichenweise wie `equalsIgnoreCase`, unabhängig von der Default-Locale). ArchiveFilePanel nutzt die Methode statt der eigenen Schleife. Tests: früher belegte Namen (auch ein umbenannter, der mit einem späteren Quellnamen kollidiert), Schreibweisen-Varianten, unter Locale tr-TR "I.pdf"/"i.pdf" (mit dem alten toLowerCase wären sie verschieden) und "Ärger.pdf"/"ärger.pdf", Abbruch.
 
-## Dateien
+## Merge von master (03.11.)
+master bekam am 02.11. bc3a1497b (macOS-Menüleiste nach Dateinamen-Dialog, #3731), ee897221b und weitere Commits. bc3a1497b ändert `FileUtils.getNewFileName()` an derselben Stelle wie dieser Branch (direkt nach `dialog.setVisible(true)`). Wie gewünscht per Merge (kein Rebase, kein Force-Push) in `f1b7eb1` zusammengeführt.
+- Konflikt nur in FileUtils.java. Auflösung: zuerst `dialog.dispose()` und die macOS-Reaktivierung des Besitzerfensters aus master, danach die Prüfung `escapeCancels`. So wird der Dialog auch beim Abbruch per Escape freigegeben, und die macOS-Korrektur greift auch dann.
+- ArchiveFilePanel.java (master: 75c06fd4a) ließ sich automatisch zusammenführen. Der Unterschied zu master ist danach genau die Änderung dieses Branches (46 geänderte Zeilen wie vorher).
+- Nach dem Merge: `git diff upstream/master` zeigt nur die Änderungen dieses Branches, `git merge-tree` gegen master Exit 0.
+- Nach dem Merge neu gebaut (Tabelle unten, gleiche Zahlen wie vorher) und die Xvfb-Prüfung des Dialogs wiederholt: unverändert (escapeCancels=true + Escape: null, false + Escape: Name, OK: Name, Abbrechen: null).
+
+## Dateien (gegen master 4dc03980f)
 - `j-lawyer-client/src/main/java/com/jdimension/jlawyer/client/editors/files/ArchiveFilePanel.java` +37 -9
 - `j-lawyer-client/src/main/java/com/jdimension/jlawyer/client/utils/FileUtils.java` +75 -0
 - `j-lawyer-client/src/test/java/org/jlawyer/test/client/utils/FileUtilsTest.java` +72 -0
 
-Gesamt gegen master: 3 files changed, 184 insertions(+), 9 deletions(-).
+Gesamt: 3 files changed, 184 insertions(+), 9 deletions(-).
 
 ## Build und Tests
 Befehl: `mvn -B -ntp -pl j-lawyer-client -am -Dmaven.test.failure.ignore=true -Dmaven.compiler.release= -Dmaven.compiler.source=17 -Dmaven.compiler.target=17 clean package`
 
 JDK: Ubuntu OpenJDK 17.0.20 plus OpenJFX 17.0.9 per jlink (BellSoft-Hosts im Proxy gesperrt), `--release` durch source/target 17 ersetzt.
 
-Ergebnis Head `2c94a25`: Build läuft durch, weil Testfehler ignoriert werden.
+Ergebnis Head `f1b7eb1` (nach dem Merge, 03.11.): Build läuft durch, weil Testfehler ignoriert werden. Gleiche Zahlen wie für `2c94a25` vor dem Merge.
 
 | Modul | ausgeführt | fehlgeschlagen | Fehler | übersprungen |
 |---|---|---|---|---|
