@@ -2,6 +2,7 @@
 
 - Branch: `fix/1779-ram-ueberwachung-ohne-cache` (fork derspotter/j-lawyer-org), base upstream/master 7b3b3dfa8
 - Commits (newest first):
+  - 416422573 derspotter <jayjag@posteo.de> | docs(server): JavaDoc zur RAM-Überwachung beschreibt genauer, wann die JVM ein Container-Limit meldet. Refs #1779
   - 0feeac66d derspotter <jayjag@posteo.de> | fix(server): RAM-Überwachung nutzt /proc/meminfo nur, wenn MemTotal genau der Gesamtgröße der JVM entspricht, auch bei einem Container-Limit knapp unter dem Hostspeicher. Refs #1779
   - 8937c09fe derspotter <jayjag@posteo.de> | fix(server): RAM-Überwachung fällt auch ohne Lesezugriff auf /proc/meminfo auf den JVM-Wert zurück, Tests für den Rückfall. Refs #1779
   - 6d95e4071 derspotter <jayjag@posteo.de> | fix(server): RAM-Überwachung zählt den Seitencache unter Linux nicht mehr als belegt. Closes #1779
@@ -10,15 +11,15 @@
 
 | File | + | - |
 |---|---|---|
-| `j-lawyer-server-common/src/main/java/com/jdimension/jlawyer/server/utils/SystemMemoryUtils.java` | 759 | 0 |
+| `j-lawyer-server-common/src/main/java/com/jdimension/jlawyer/server/utils/SystemMemoryUtils.java` | 761 | 0 |
 | `j-lawyer-server-common/src/test/java/org/jlawyer/test/system/SystemMemoryUtilsTest.java` | 775 | 0 |
 | `j-lawyer-server/j-lawyer-server-ejb/src/main/java/com/jdimension/jlawyer/services/SystemManagement.java` | 2 | 1 |
 | `j-lawyer-server/j-lawyer-server-war/src/main/java/com/jdimension/jlawyer/timer/SystemMonitorTask.java` | 2 | 1 |
-| total | 1538 | 2 |
+| total | 1540 | 2 |
 
 ## Build and tests
 
-JDK: Ubuntu OpenJDK 17.0.20 + OpenJFX 17.0.9 from Maven Central, combined with jlink. Maven 3.9.11. Branch at commit 0feeac66d built (started 03.11.2026 18:30 UTC) and master 7b3b3dfa8 built (02.11.2026, in a separate worktree) with the identical command in the same container:
+JDK: Ubuntu OpenJDK 17.0.20 + OpenJFX 17.0.9 from Maven Central, combined with jlink. Maven 3.9.11. Branch at commit 416422573 built (started 03.11.2026 19:17 UTC) and master 7b3b3dfa8 built (02.11.2026, in a separate worktree) with the identical command in the same container:
 
 ```
 mvn -B -ntp -pl j-lawyer-server/j-lawyer-server-ejb,j-lawyer-server/j-lawyer-server-war -am -Dmaven.test.failure.ignore=true -Dmaven.compiler.release= -Dmaven.compiler.source=17 -Dmaven.compiler.target=17 clean package
@@ -82,3 +83,21 @@ Geprüft: Quelltext von JDK 17 (jdk17u, OperatingSystemImpl.java und OperatingSy
 Antworten je Thread:
 
 - PRRT_kwDOCUQTLc6zQ2yU: Behoben in 0feeac66d: /proc/meminfo wird nur noch genutzt, wenn MemTotal genau der Gesamtgröße der JVM entspricht. Ohne Speicherlimit liefert die JVM unter Linux sysconf(_SC_PHYS_PAGES) mal Seitengröße, das ist bytegenau MemTotal (JDK 17 OperatingSystemImpl.getTotalMemorySize, geprüft mit 16872804352 Byte auf beiden Seiten). Mit Limit liefert sie das Limit, dann gilt wieder der Wert der JVM. Neuer Test mit Limits knapp unter und knapp über MemTotal, er schlägt mit dem vorherigen Stand fehl.
+
+## Antwort auf Codex 03.11. (Runde 2)
+
+Neuer Commit: 416422573.
+
+Build (Stand 416422573, gestartet 03.11.2026 19:17 UTC, Ubuntu OpenJDK 17.0.20 mit OpenJFX 17.0.9, Maven 3.9.11):
+
+```
+mvn -B -ntp -pl j-lawyer-server/j-lawyer-server-ejb,j-lawyer-server/j-lawyer-server-war -am -Dmaven.test.failure.ignore=true -Dmaven.compiler.release= -Dmaven.compiler.source=17 -Dmaven.compiler.target=17 clean package
+```
+
+Ergebnis: BUILD SUCCESS. 1030 Tests gesamt, 1014 ausgeführt, 16 übersprungen, 22 fehlgeschlagen. Die fehlgeschlagenen Tests sind dieselben wie auf master 7b3b3dfa8 (siehe Build and tests). Der Commit ändert nur die JavaDoc, es gibt keine neuen Tests.
+
+Punkte: Die JavaDoc von SystemMemoryUtils und pr.md beschreiben jetzt ein von der JVM erkanntes Limit unter dem Hostspeicher. Ein Limit in Höhe des Hostspeichers oder darüber behandelt OpenJDK wie kein Limit, dann stimmen JVM-Wert und MemTotal überein. Die Schlussfolgerung „also kein Limit“ zum Issue ist gestrichen. Der Commit ändert nur die JavaDoc.
+
+pr.md ist angepasst (siehe die Punkte oben).
+
+Keine weiteren Antworten je Thread nötig.
