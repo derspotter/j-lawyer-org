@@ -1,13 +1,13 @@
 # Report: FolderListCell.drop() ohne return nach rejectDrop()
 
 - Branch: `fix/folderlistcell-reject-drop` (Basis: upstream/master 7b3b3dfa8)
-- Commit (Head): `e0fecddd2` (nach dem Autor-Umschreiben durch den Orchestrator, 02.11.)
-- Status: Code fertig. Autor ist jetzt derspotter (vom Orchestrator umgeschrieben). Offen: die Commit-Nachricht hat noch die alte Formulierung, die der Review vom 01.11. korrigiert haben wollte. Korrigierter Text siehe "Für das Umschreiben".
+- Commit (Head): `df9e0fa6c` (Autor und Commit-Nachricht vom Orchestrator umgeschrieben, 03.11., Baum unverändert)
+- Status: fertig. Autor derspotter, Commit-Nachricht korrigiert (beides vom Orchestrator, 03.11.).
 
 ## Nachtrag 01.11.2026 (Codex-Review, Autor)
-- 02.11.: Der Orchestrator hat den Autor auf derspotter umgeschrieben (Head `e0fecddd2`). Die Commit-Nachricht ist dabei unverändert geblieben und enthält noch die alte Formulierung. Die korrigierte Nachricht steht unten unter "Für das Umschreiben". Ohne Force-Push kann ich sie nicht ändern.
+- 03.11.: Der Orchestrator hat Autor und Commit-Nachricht umgeschrieben (Head `df9e0fa6c`, Baum identisch mit dem vorherigen Stand). Damit ist der Nachtrag erledigt.
 - Autor auf `derspotter <jayjag@posteo.de>` umschreiben (amend + `git push --force-with-lease`): in der Cloud-Session vom Auto-Mode-Klassifikator als destruktive Git-Aktion abgelehnt. Nicht umgangen. Der Branch hat deshalb noch den Commit mit Autor Claude.
-- Code unverändert, Head weiterhin `6cf6849` (Autor Claude). Die Commit-Nachricht beschreibt noch den falschen Ablauf (zweite, unbehandelte Exception). Die Korrektur braucht ein amend und ist deshalb noch offen (Text siehe unten).
+- Code unverändert, Head weiterhin `6cf6849` (Autor Claude). Die Commit-Nachricht beschreibt noch den falschen Ablauf (zweite, unbehandelte Exception). Erledigt am 03.11. durch den Orchestrator (Text siehe unten).
 - pr.md: `## Verifiziert` nennt jetzt den genauen Befehl inkl. `-Dmaven.test.failure.ignore=true` und Compiler-Overrides, das JDK-Setup und dass der Build nur wegen ignorierter Testfehler durchläuft (einzige fehlschlagende Klassen FtpTest/SftpTest/SmbTest wie auf master). pr.md: Ursache und Fix nach dem Review neu beschrieben, siehe Abschnitt "Korrektur der Analyse".
 
 ### Für das Umschreiben (lokal im Orchestrator)
