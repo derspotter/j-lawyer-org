@@ -1,9 +1,22 @@
 # Report #3407: Dateinamen beim Kopieren/Verschieben beibehalten
 
 - Branch: `fix/3407-keep-file-names-copy-move` (ursprüngliche Basis: upstream/master 7b3b3dfa8, am 03.11. mit master 4dc03980f zusammengeführt)
-- Commits: `1f4955c` (Feature), `2c94a25` (Review-Punkte 02.11.), `f1b7eb1` (Merge von master 4dc03980f), `3b2cbfd` (Namensprüfung im Hintergrund, Review 03.11.), Head `3b2cbfd`
+- Commits: `1f4955c` (Feature), `2c94a25` (Review-Punkte 02.11.), `f1b7eb1` (Merge von master 4dc03980f), `3b2cbfd` (Namensprüfung im Hintergrund), `b553c97` (Anzeige nicht schließbar, Review 03.11. (2)), Head `b553c97`
 - Autor aller Commits: derspotter <jayjag@posteo.de>, Co-Authored-By Claude
-- Status: Review 03.11. umgesetzt (siehe "Antwort auf Review 03.11."). Bereit für erneuten Codex-Review und lokalen Liberica-Build.
+- Status: Review 03.11. (2) umgesetzt (siehe "Antwort auf Review 03.11. (2)"). Bereit für erneuten Codex-Review und lokalen Liberica-Build.
+
+## Antwort auf Review 03.11. (2)
+
+### [P2] Schließen der Fortschrittsanzeige beendet die Prüfung vorzeitig: umgesetzt
+Stimmt. `ProgressIndicator` hat `DISPOSE_ON_CLOSE`, das Ausblenden des Abbrechen-Knopfs verhindert ein Schließen über den Fenstermanager (z.B. Alt+F4) nicht. Dann kehrte `pi.setVisible(true)` zurück, die Methode lieferte das noch leere Ergebnis, und `ArchiveFilePanel` lief mit `takenNames == null` in einen Fehler.
+Fix in `b553c97`: `callWithProgressIndicator()` setzt für diese Anzeige `DO_NOTHING_ON_CLOSE` und wartet nach dem modalen Anzeigen mit `worker.join()` in jedem Fall auf den Hintergrund-Thread. Im Normalfall ist der Thread dann schon fertig (er schließt die Anzeige selbst im finally), das join wartet also nur, wenn die Anzeige auf anderem Weg verschwunden ist.
+Geprüft unter Xvfb (Scratch-Programm, nicht committet, drei Durchläufe, alle gleich): ein `WINDOW_CLOSING` an die Anzeige 300 ms nach Start einer Aufgabe von 1,5 s liefert das Ergebnis "ok" nach 1506 bis 1507 ms, ein erzwungenes `setVisible(false)` ebenso nach 1505 bis 1507 ms. Die bisherigen Prüfungen (Aufgabe nicht im EDT, EDT tickt 15 bis 16 mal, Exception kommt an, 30 von 30 sofort fertigen Aufgaben) unverändert.
+
+### [P3] Testzahl-Basis: korrigiert
+Stimmt. Auf master hat `FileUtilsTest` 2 Tests (`git show upstream/master:...FileUtilsTest.java`, zwei `@Test`), dieser Branch hat 6, also 4 neue. Die Angabe "von 3 auf 6" bezog sich auf den Feature-Commit und ist unten korrigiert.
+
+### Build Head `b553c97`
+Gleicher Befehl wie unten. 272 ausgeführt, 17 fehlgeschlagen (FtpTest 6, SftpTest 6, SmbTest 5), 0 Fehler, 0 übersprungen. Client 85 ausgeführt, 0 fehlgeschlagen. `git merge-tree` gegen den aktuellen master 913123ae9: Exit 0.
 
 ## Antwort auf Review 03.11.
 
@@ -49,13 +62,37 @@ master bekam am 02.11. bc3a1497b (macOS-Menüleiste nach Dateinamen-Dialog, #373
 - Nach dem Merge: `git diff upstream/master` zeigt nur die Änderungen dieses Branches, `git merge-tree` gegen master Exit 0.
 - Nach dem Merge neu gebaut (Tabelle unten, gleiche Zahlen wie vorher) und die Xvfb-Prüfung des Dialogs wiederholt: unverändert (escapeCancels=true + Escape: null, false + Escape: Name, OK: Name, Abbrechen: null).
 
-## Dateien (gegen master 4dc03980f, Head 3b2cbfd)
+## Dateien (gegen master 913123ae9, Head b553c97)
+- `SECURITY.md` +0 -83
+- `j-lawyer-client/src/main/java/com/jdimension/jlawyer/client/components/MultiCalDialog.java` +19 -34
 - `j-lawyer-client/src/main/java/com/jdimension/jlawyer/client/editors/files/ArchiveFilePanel.java` +50 -9
+- `j-lawyer-client/src/main/java/com/jdimension/jlawyer/client/editors/files/CaseAccountEntryPanel.java` +0 -2
 - `j-lawyer-client/src/main/java/com/jdimension/jlawyer/client/utils/FileUtils.java` +75 -0
-- `j-lawyer-client/src/main/java/com/jdimension/jlawyer/client/utils/ThreadUtils.java` +42 -0
+- `j-lawyer-client/src/main/java/com/jdimension/jlawyer/client/utils/ThreadUtils.java` +47 -0
+- `j-lawyer-client/src/main/resources/resources/suneditor/suneditor-template.html` +3 -30
 - `j-lawyer-client/src/test/java/org/jlawyer/test/client/utils/FileUtilsTest.java` +72 -0
+- `j-lawyer-server-common/src/main/java/com/jdimension/jlawyer/security/jwt/JwtClaims.java` +0 -12
+- `j-lawyer-server-common/src/main/java/com/jdimension/jlawyer/security/jwt/JwtService.java` +1 -26
+- `j-lawyer-server-common/src/test/java/org/jlawyer/test/jwt/JwtServiceTest.java` +0 -11
+- `j-lawyer-server/j-lawyer-io/src/main/java/org/jlawyer/io/rest/v7/EmailEndpointV7.java` +0 -4
+- `j-lawyer-server/j-lawyer-io/src/main/java/org/jlawyer/io/rest/v8/AuthenticationEndpointV8.java` +14 -39
+- `j-lawyer-server/j-lawyer-io/src/main/java/org/jlawyer/io/rest/v8/DocumentsBinEndpointV8.java` +2 -3
+- `j-lawyer-server/j-lawyer-server-ejb/src/main/java/com/jdimension/jlawyer/services/ArchiveFileService.java` +2 -30
+- `j-lawyer-server/j-lawyer-server-ejb/src/main/java/com/jdimension/jlawyer/services/EmailService.java` +2 -51
+- `j-lawyer-server/j-lawyer-server-ejb/src/main/java/com/jdimension/jlawyer/services/FormsService.java` +4 -49
+- `j-lawyer-server/j-lawyer-server-ejb/src/main/java/com/jdimension/jlawyer/services/InvoiceService.java` +2 -15
+- `j-lawyer-server/j-lawyer-server-ejb/src/main/java/com/jdimension/jlawyer/services/MessagingService.java` +5 -104
+- `j-lawyer-server/j-lawyer-server-ejb/src/main/java/com/jdimension/jlawyer/services/PaymentService.java` +3 -31
+- `j-lawyer-server/j-lawyer-server-ejb/src/main/java/com/jdimension/jlawyer/services/SecurityService.java` +1 -49
+- `j-lawyer-server/j-lawyer-server-ejb/src/main/java/com/jdimension/jlawyer/services/SecurityServiceLocal.java` +0 -11
+- `j-lawyer-web/frontend/public/i18n/de.json` +0 -2
+- `j-lawyer-web/frontend/public/i18n/en.json` +0 -2
+- `j-lawyer-web/frontend/src/app/trash/papierkorb.component.ts` +2 -6
+- `openspec/changes/add-web-client/design.md` +0 -19
+- `openspec/changes/add-web-client/specs/web-client/spec.md` +0 -16
+- `openspec/changes/add-web-client/tasks.md` +0 -2
 
-Gesamt: 4 files changed, 239 insertions(+), 9 deletions(-).
+Gesamt: 28 files changed, 304 insertions(+), 640 deletions(-).
 
 ## Build und Tests
 Befehl: `mvn -B -ntp -pl j-lawyer-client -am -Dmaven.test.failure.ignore=true -Dmaven.compiler.release= -Dmaven.compiler.source=17 -Dmaven.compiler.target=17 clean package`
@@ -73,7 +110,7 @@ Ergebnis Head `f1b7eb1` (nach dem Merge, 03.11.): Build läuft durch, weil Testf
 | j-lawyer-client | 85 | 0 | 0 | 0 |
 | Summe | 272 | 17 | 0 | 0 |
 
-j-lawyer-invoicing und j-lawyer-server-api haben keine Tests. Die 17 Fehlschläge sind FtpTest (6), SftpTest (6), SmbTest (5), wie auf master (dort Client 81 Tests). Neu im Client: FileUtilsTest von 3 auf 6 Tests (testKeepFileNameUnlessTaken, testKeepFileNamesReservesEarlierNames, testKeepFileNamesUnicodeCaseIndependentOfLocale, testKeepFileNamesCancel).
+j-lawyer-invoicing und j-lawyer-server-api haben keine Tests. Die 17 Fehlschläge sind FtpTest (6), SftpTest (6), SmbTest (5), wie auf master (dort Client 81 Tests). Neu im Client: FileUtilsTest von 2 Tests auf master auf 6 Tests, also 4 neue (testKeepFileNameUnlessTaken, testKeepFileNamesReservesEarlierNames, testKeepFileNamesUnicodeCaseIndependentOfLocale, testKeepFileNamesCancel).
 
 ## Merge-Prüfung
 `git merge-tree --write-tree` gegen alle Branches unter origin/fix/*, die ArchiveFilePanel.java oder FileUtils.java ändern (nur `fix/duplicate-document-keep-metadata`): Exit 0, für den Feature-Commit und erneut für Head `2c94a25`.
