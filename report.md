@@ -117,3 +117,18 @@ Antworten je Thread:
 
 Hinweis zur Prüfung: getDocuments und getDocumentsBin verlangen readArchiveFileRole und prüfen die Gruppen der Akte, doesDocumentExist verlangte nur loginRole. Wer Dokumente in eine Akte kopiert, braucht ohnehin Lese- und Schreibzugriff, praktisch ändert das nichts. Laufzeit mit großem Papierkorb nicht gemessen.
 
+## Antwort auf Copilot Runde 2 03.11.
+
+Neuer Commit: `a287a0559` (Autor derspotter, Co-Authored-By Claude), normaler Push auf `fix/3407-keep-file-names-copy-move`. Revert von `18aceefcc`. Der Baum ist danach identisch mit `b553c97`: die Prüfung läuft wieder mit `doesDocumentExist()` pro Name im Hintergrund, `FileUtils.documentNamesInCase()` und `testDocumentNamesInCase` sind wieder entfernt. Die Antwort zu PRRT_kwDOCUQTLc6zRDnp aus dem Abschnitt "Antwort auf Copilot-Review 03.11." oben ("Behoben in 18aceef") gilt damit nicht mehr, sie ist unten ersetzt.
+
+Build: `mvn -B -ntp -pl j-lawyer-client -am -Dmaven.test.failure.ignore=true -Dmaven.compiler.release= -Dmaven.compiler.source=17 -Dmaven.compiler.target=17 clean package`
+JDK: Ubuntu OpenJDK 17.0.20 plus OpenJFX 17.0.9 aus Maven Central per jlink (BellSoft-Hosts im Cloud-Proxy gesperrt), deshalb `--release` durch source/target 17 ersetzt.
+Ergebnis: Build läuft durch, weil Testfehler ignoriert werden. Ausgeführt 272, fehlgeschlagen 17 (FtpTest 6, SftpTest 6, SmbTest 5, wie auf master), Fehler 0, übersprungen 0. Client 85 ausgeführt, 0 fehlgeschlagen, `FileUtilsTest` 6 (master: 2).
+
+pr.md: wieder die Fassung vor 18aceef (Prüfung pro Name mit doesDocumentExist im Hintergrund, Name aus dem Konfliktdialog einzeln geprüft), nur der Head im Build-Punkt lautet jetzt a287a05.
+
+Antworten je Thread:
+- PRRT_kwDOCUQTLc6zRDnp: Nicht umgesetzt: doesDocumentExist() ist die einzige Remote-Prüfung, die jeden Namen unabhängig von den Gruppen des Nutzers sieht. Ein Sammeln im Client über getDocuments() und getDocumentsBin() übersieht Namen in Akten außerhalb der eigenen Gruppen und lädt den Papierkorb aller Akten. Die Übertragungen sind klein und laufen im Hintergrund mit Fortschrittsanzeige, und eine neue Server-Methode für eine Sammelprüfung würde diesen PR erweitern.
+- PRRT_kwDOCUQTLc6zR6hu: Erledigt in a287a05: Der Commit mit getDocumentsBin() ist zurückgenommen. Die Prüfung läuft wieder mit doesDocumentExist() pro Name, der Papierkorb aller Akten wird nicht mehr geladen.
+- PRRT_kwDOCUQTLc6zR6iZ: Erledigt in a287a05: Der Commit mit getDocuments() und getDocumentsBin() ist zurückgenommen. doesDocumentExist() sieht die Namen der Zielakte unabhängig von den Gruppen des Nutzers, belegte Namen führen also wieder zur Rückfrage.
+
