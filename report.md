@@ -2,6 +2,7 @@
 
 - Branch: `fix/3371-belegdialog-eingaben-behalten` (fork derspotter/j-lawyer-org), base upstream/master 7b3b3dfa8
 - Commits (newest first):
+  - 853000ac8 derspotter <jayjag@posteo.de> | test(finanzen): Test für Belege ohne Belegart prüft das erfolgreiche Speichern und das anschließende Zuweisen einer Belegart ohne pauschales Abfangen von Fehlern. Refs #3371
   - cd71f8590 derspotter <jayjag@posteo.de> | fix(finanzen): Bestätigen von Belegart/Nummernkreis bricht auch bei einem Fehler beim Speichern einer Position ab, Belege ohne Belegart lassen sich speichern. Refs #3371
   - 12f93c1fd derspotter <jayjag@posteo.de> | fix(finanzen): Belegdialog verwirft beim erneuten Bestätigen von Belegart/Nummernkreis keine Eingaben mehr. Closes #3371
 
@@ -11,10 +12,10 @@
 |---|---|---|
 | `j-lawyer-client/src/main/java/com/jdimension/jlawyer/client/editors/files/InvoiceDialog.java` | 10 | 2 |
 | `j-lawyer-server/j-lawyer-server-ejb/src/main/java/com/jdimension/jlawyer/services/ArchiveFileService.java` | 3 | 1 |
-| `j-lawyer-server/j-lawyer-server-ejb/src/test/java/org/jlawyer/test/server/ejb/UpdateInvoiceWithoutTypeTest.java` | 758 | 0 |
-| total | 771 | 3 |
+| `j-lawyer-server/j-lawyer-server-ejb/src/test/java/org/jlawyer/test/server/ejb/UpdateInvoiceWithoutTypeTest.java` | 779 | 0 |
+| total | 792 | 3 |
 
-## Build and tests (02.11.2026)
+## Build and tests (03.11.2026)
 
 JDK: Ubuntu OpenJDK 17.0.20 + OpenJFX 17.0.9 from Maven Central, combined with jlink. Maven 3.9.11. Branch and master 7b3b3dfa8 built with the identical command in the same container (master in a separate worktree):
 
@@ -60,3 +61,10 @@ Failing tests: identical to master
 
 ## Unverified
 - No GUI run against a server.
+
+## Antwort auf Review 03.11.
+1. [P2] The regression test accepted a failed save: agreed, fixed in 853000ac8. The blanket `catch (Throwable)` is gone. The test uses an anonymous subclass of `ArchiveFileService` that overrides the public `addCaseHistory(String, ArchiveFileBean, String)` and records the description, so the JDBC update of the case change date (no data source in a unit test) is not reached. It asserts that `updateInvoice()` returns normally, that the returned invoice carries the edits (status, name) and the history text "Beleg geändert (R-2019-007, ..., ohne Belegart)". Then it calls `updateInvoiceType()` for the same invoice with a number range and a type (fakes for `invoicesPoolsFacade`, `invoicesTypesFacade` and `invoiceService.nextInvoiceNumber()`) and asserts type, pool id, the new number "RE-2026-001", the kept name and the second history entry "Belegart oder Nummernkreis geändert (RE-2026-001, Rechnung)". pr.md now describes exactly this.
+2. [P3] SMB test prerequisites: agreed. FtpTest and SftpTest read their credentials from environment variables, SmbTest uses the hard-coded share smb://j-lawyer-box/j-lawyer-share/. pr.md now says this.
+
+## Evidence 03.11.
+- Test run with plain javac + JUnit against the compiled EJB module of this worktree (classpath taken from the surefire report of the previous build): 1 of 1 passes. With `ArchiveFileService` from master 7b3b3dfa8 compiled in front of it, the test fails with `NullPointerException: Cannot invoke "...InvoiceType.getDisplayName()" because the return value of "...Invoice.getInvoiceType()" is null` at `ArchiveFileService.updateInvoice`.
