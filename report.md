@@ -101,3 +101,19 @@ j-lawyer-invoicing und j-lawyer-server-api haben keine Tests. Die 17 Fehlschläg
 - Soll die Frage bei genau einem Dokument entfallen (dann nur der bisherige Einzeldialog)?
 - Texte der Knöpfe und der Frage sind Vorschläge.
 - Folge-PR für copy/move als ProgressableAction (siehe Punkt 2)?
+
+## Antwort auf Copilot-Review 03.11.
+
+Neuer Commit: `18aceefcc` (Autor derspotter, Co-Authored-By Claude), normal gepusht auf `fix/3407-keep-file-names-copy-move`.
+
+Build: `mvn -B -ntp -pl j-lawyer-client -am -Dmaven.test.failure.ignore=true -Dmaven.compiler.release= -Dmaven.compiler.source=17 -Dmaven.compiler.target=17 clean package`
+JDK: Ubuntu OpenJDK 17.0.20 plus OpenJFX 17.0.9 aus Maven Central per jlink (BellSoft-Hosts im Cloud-Proxy gesperrt), deshalb `--release` durch source/target 17 ersetzt.
+Ergebnis: Build läuft durch, weil Testfehler ignoriert werden. Ausgeführt 273, fehlgeschlagen 17 (FtpTest 6, SftpTest 6, SmbTest 5, wie auf master), Fehler 0, übersprungen 0. Client 86 ausgeführt, 0 fehlgeschlagen, `FileUtilsTest` 7 (master: 2, neu: testDocumentNamesInCase). `git merge-tree` gegen master 3a7f47e40: Exit 0.
+
+pr.md angepasst: Die Aussagen "Pro Dokument gibt es eine Serverabfrage doesDocumentExist" und "Ein im Konfliktdialog eingegebener Name wird einzeln im Event-Thread geprüft" stimmten nach diesem Commit nicht mehr. Jetzt beschrieben: einmal getDocuments, einmal getDocumentsBin pro Vorgang, Namen aus dem Konfliktdialog ohne weiteren Serveraufruf. Testzahlen und Head ebenfalls aktualisiert.
+
+Antworten je Thread:
+- PRRT_kwDOCUQTLc6zRDnp: Behoben in 18aceef: Die Hintergrundprüfung lädt jetzt einmal pro Vorgang die Dokumente der Zielakte (getDocuments) und einmal den Papierkorb (getDocumentsBin, im Client auf die Zielakte gefiltert) und vergleicht ohne Groß- und Kleinschreibung wie doesDocumentExist(). Aus N Serveraufrufen werden zwei, auch Namen aus dem Konfliktdialog brauchen keinen weiteren Aufruf. Eine neue Remote-Methode wollten wir für diesen PR nicht einführen. Da die Remote-API keinen Papierkorb pro Akte kennt, lädt getDocumentsBin() dafür einmal pro Vorgang den Papierkorb aller zugänglichen Akten.
+
+Hinweis zur Prüfung: getDocuments und getDocumentsBin verlangen readArchiveFileRole und prüfen die Gruppen der Akte, doesDocumentExist verlangte nur loginRole. Wer Dokumente in eine Akte kopiert, braucht ohnehin Lese- und Schreibzugriff, praktisch ändert das nichts. Laufzeit mit großem Papierkorb nicht gemessen.
+
