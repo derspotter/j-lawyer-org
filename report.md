@@ -2,6 +2,7 @@
 
 - Branch: `fix/2460-ablegen-als-datei-ersetzen` (fork derspotter/j-lawyer-org), base upstream/master 7b3b3dfa8
 - Commits (newest first):
+  - d5ceca160 derspotter <jayjag@posteo.de> | fix(documents): nach dem Ersetzen wird die Dokumentliste der Akte neu geladen, Etiketten behalten ihr Datum, eine behobene Warnung zu Etiketten entfällt, der Papierkorb wird nur bei Bedarf geladen. Refs #2460
   - 757a6ab74 derspotter <jayjag@posteo.de> | fix(documents): Ersetzen bei „ablegen als“ stellt die Etiketten der bisherigen Datei nach jedem Umbenennen wieder her, eindeutige Zwischennamen auch bei mehreren Ersetzungen in derselben Millisekunde. Refs #2460
   - 7fd94c432 derspotter <jayjag@posteo.de> | fix(documents): Ersetzen bei „ablegen als“ löscht bei Fehlern nichts mehr, die bisherige Datei wird erst nach dem Ersetzen umbenannt in den Papierkorb gelegt, und der tatsächliche Stand aller Dateien wird angezeigt. Refs #2460
   - fba8fc68f derspotter <jayjag@posteo.de> | fix(documents): Ersetzen bei „ablegen als“ ermittelt die zu ersetzende Datei beim Server und prüft ihren Namen vor dem Löschen, Etiketten richten sich nach dem endgültigen Namen, kurzer Zwischenname für lange Dateinamen, Teilfehler werden angezeigt und rückgängig gemacht. Refs #2460
@@ -12,14 +13,14 @@
 
 | File | + | - |
 |---|---|---|
-| `j-lawyer-client/src/main/java/com/jdimension/jlawyer/client/editors/files/ArchiveFilePanel.java` | 50 | 1 |
-| `j-lawyer-client/src/main/java/com/jdimension/jlawyer/client/editors/files/DocumentReplacement.java` | 1058 | 0 |
-| `j-lawyer-client/src/test/java/com/jdimension/jlawyer/client/editors/files/DocumentReplacementTest.java` | 1216 | 0 |
-| total | 2324 | 1 |
+| `j-lawyer-client/src/main/java/com/jdimension/jlawyer/client/editors/files/ArchiveFilePanel.java` | 77 | 2 |
+| `j-lawyer-client/src/main/java/com/jdimension/jlawyer/client/editors/files/DocumentReplacement.java` | 1070 | 0 |
+| `j-lawyer-client/src/test/java/com/jdimension/jlawyer/client/editors/files/DocumentReplacementTest.java` | 1281 | 0 |
+| total | 2428 | 2 |
 
 ## Build and tests
 
-JDK: Ubuntu OpenJDK 17.0.20 + OpenJFX 17.0.9 from Maven Central, combined with jlink. Maven 3.9.11. Branch at commit 757a6ab74 built (started 03.11.2026 12:52 UTC) and master 7b3b3dfa8 built (02.11.2026, in a separate worktree) with the identical command in the same container:
+JDK: Ubuntu OpenJDK 17.0.20 + OpenJFX 17.0.9 from Maven Central, combined with jlink. Maven 3.9.11. Branch at commit d5ceca160 built (started 03.11.2026 18:38 UTC) and master 7b3b3dfa8 built (02.11.2026, in a separate worktree) with the identical command in the same container:
 
 ```
 mvn -B -ntp -pl j-lawyer-client -am -Dmaven.test.failure.ignore=true -Dmaven.compiler.release= -Dmaven.compiler.source=17 -Dmaven.compiler.target=17 clean package
@@ -27,12 +28,12 @@ mvn -B -ntp -pl j-lawyer-client -am -Dmaven.test.failure.ignore=true -Dmaven.com
 
 | Module | branch total / executed / skipped / failed | master total / executed / skipped / failed |
 |---|---|---|
-| j-lawyer-client | 98 / 98 / 0 / 0 | 81 / 81 / 0 / 0 |
+| j-lawyer-client | 100 / 100 / 0 / 0 | 81 / 81 / 0 / 0 |
 | j-lawyer-cloud | 4 / 4 / 0 / 0 | 4 / 4 / 0 / 0 |
 | j-lawyer-fax | 23 / 23 / 0 / 0 | 23 / 23 / 0 / 0 |
 | j-lawyer-server-common | 104 / 104 / 0 / 17 | 104 / 104 / 0 / 17 |
 | j-lawyer-server-entities | 56 / 56 / 0 / 0 | 56 / 56 / 0 / 0 |
-| total | 285 / 285 / 0 / 17 | 268 / 268 / 0 / 17 |
+| total | 287 / 287 / 0 / 17 | 268 / 268 / 0 / 17 |
 
 Failing tests: identical to master
 
@@ -91,3 +92,25 @@ Failing tests: identical to master
 
 ## Evidence 03.11. (3)
 - `DocumentReplacementTest`: plain javac + JUnit 4.12 against the module classes of this worktree, 17 of 17 pass (three runs). With `DocumentReplacement` from 7fd94c432 the three tag tests fail, the other 14 pass.
+
+## Antwort auf Copilot-Review 03.11.
+
+Neue Commits: d5ceca160.
+
+Build (Stand d5ceca160, gestartet 03.11.2026 18:38 UTC, Ubuntu OpenJDK 17.0.20 mit OpenJFX 17.0.9, Maven 3.9.11):
+
+```
+mvn -B -ntp -pl j-lawyer-client -am -Dmaven.test.failure.ignore=true -Dmaven.compiler.release= -Dmaven.compiler.source=17 -Dmaven.compiler.target=17 clean package
+```
+
+Ergebnis: BUILD SUCCESS. 287 Tests gesamt, 287 ausgeführt, 0 übersprungen, 17 fehlgeschlagen. Die fehlgeschlagenen Tests sind dieselben wie auf master 7b3b3dfa8 (siehe Build and tests), die neuen Tests bestehen.
+
+Korrektur zu Antwort (3): Das Datum, an dem ein Etikett gesetzt wurde, wird jetzt ebenfalls wiederhergestellt. ArchiveFilePanel wurde zusätzlich mit dem Klassenpfad des Client-Builds einzeln kompiliert. pr.md ist angepasst.
+
+Antworten je Thread:
+
+- PRRT_kwDOCUQTLc6zRDYk: Behoben in d5ceca160: Nach dem Ersetzen und nach einem Fehler wird die Dokumentliste der Akte samt Etiketten vom Server neu geladen und erst danach angezeigt. Umbenennungen durch andere Clients erscheinen mit dem aktuellen Namen, das neue Dokument wird nicht zusätzlich eingefügt. Schlägt das Laden fehl, werden wie bisher nur die beteiligten Dokumente angepasst.
+- PRRT_kwDOCUQTLc6zRDZF: Behoben in d5ceca160: Ein wieder angezeigtes Dokument behält seine im Client bekannte Verknüpfung mit einem Beleg, beim Neuladen der Liste und im Rückfall.
+- PRRT_kwDOCUQTLc6zRDZh: Behoben in d5ceca160: Die Sicherung der Etiketten enthält das Datum. Ein Etikett mit geändertem Wert oder Datum wird entfernt und mit dem gesicherten Wert und Datum neu angelegt, denn der Server übernimmt ein mitgegebenes Datum nur beim Anlegen. Der Test prüft die Daten, mit dem vorherigen Stand schlägt er fehl.
+- PRRT_kwDOCUQTLc6zRDaF: Behoben in d5ceca160: Warnungen zu Etiketten werden je Dokument geführt und entfallen, wenn ein späterer Versuch gelingt. Neuer Test mit einem einmaligen Fehler beim ersten Wiederherstellen.
+- PRRT_kwDOCUQTLc6zRDas: Behoben in d5ceca160: Hat ein Dokument der Akte den Namen schon, wird der Papierkorb nicht geladen, denn Namen sind in Akte und Papierkorb zusammen eindeutig. Eine Abfrage nur für den Papierkorb einer Akte bietet das Remote-Interface nicht, eine neue Methode wird bewusst nicht ergänzt.
