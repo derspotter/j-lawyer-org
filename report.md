@@ -49,12 +49,13 @@ master bekam am 02.11. bc3a1497b (macOS-Menüleiste nach Dateinamen-Dialog, #373
 - Nach dem Merge: `git diff upstream/master` zeigt nur die Änderungen dieses Branches, `git merge-tree` gegen master Exit 0.
 - Nach dem Merge neu gebaut (Tabelle unten, gleiche Zahlen wie vorher) und die Xvfb-Prüfung des Dialogs wiederholt: unverändert (escapeCancels=true + Escape: null, false + Escape: Name, OK: Name, Abbrechen: null).
 
-## Dateien (gegen master 4dc03980f)
-- `j-lawyer-client/src/main/java/com/jdimension/jlawyer/client/editors/files/ArchiveFilePanel.java` +37 -9
+## Dateien (gegen master 4dc03980f, Head 3b2cbfd)
+- `j-lawyer-client/src/main/java/com/jdimension/jlawyer/client/editors/files/ArchiveFilePanel.java` +50 -9
 - `j-lawyer-client/src/main/java/com/jdimension/jlawyer/client/utils/FileUtils.java` +75 -0
+- `j-lawyer-client/src/main/java/com/jdimension/jlawyer/client/utils/ThreadUtils.java` +42 -0
 - `j-lawyer-client/src/test/java/org/jlawyer/test/client/utils/FileUtilsTest.java` +72 -0
 
-Gesamt: 3 files changed, 184 insertions(+), 9 deletions(-).
+Gesamt: 4 files changed, 239 insertions(+), 9 deletions(-).
 
 ## Build und Tests
 Befehl: `mvn -B -ntp -pl j-lawyer-client -am -Dmaven.test.failure.ignore=true -Dmaven.compiler.release= -Dmaven.compiler.source=17 -Dmaven.compiler.target=17 clean package`
