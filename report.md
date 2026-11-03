@@ -99,3 +99,13 @@ Antworten je Thread:
 - PRRT_kwDOCUQTLc6zQ6n9: Behoben in 7de61c72f: Der Test sammelt die Ereignisse in einer CopyOnWriteArrayList, das Kopieren braucht keine Sperre mehr.
 - PRRT_kwDOCUQTLc6zQ6oa: Behoben in 7de61c72f: Siehe oben, dieselbe Liste wird jetzt als CopyOnWriteArrayList geführt.
 - PRRT_kwDOCUQTLc6zQ6pR: Behoben in 7de61c72f: Die Zeile ist in diesem PR neu und lautet jetzt unread += messages.size().
+
+## Antwort auf Codex 03.11. (Runde 2)
+
+Kein neuer Commit, nur pr.md ist geändert. Der Build unter Build and tests gilt weiter.
+
+Punkte: Unter Nicht abgedeckt steht jetzt, dass das Aktualisieren der Ordner je Posteingang nur so viele Nachrichten lädt, wie die Einstellung zum Herunterladen erlaubt (BeaAccess.getFilter, ohne Einstellung 50). Das gilt schon vor diesem PR. Der Veröffentlichungstest ist als Test mit Posteingängen beschrieben, die nur gelesene Nachrichten enthalten.
+
+pr.md ist angepasst (siehe die Punkte oben).
+
+Keine weiteren Antworten je Thread nötig.
