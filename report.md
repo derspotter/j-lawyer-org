@@ -1,8 +1,35 @@
 # Report #1283: Adressen - neu nach Speichern über den Etiketten-Reiter
 
 - Branch: `fix/1283-new-contact-after-tag-save` (Basis: upstream/master 7b3b3dfa8)
-- Commit (Head): `8fde5cda0` (nach dem Autor-Umschreiben durch den Orchestrator, 02.11.)
-- Status: fertig. Autor ist jetzt derspotter (vom Orchestrator umgeschrieben, 02.11.). Die Commit-Nachricht braucht keine Korrektur.
+- Commits: `8fde5cd` (Fix, Autor vom Orchestrator umgeschrieben), `729e3a1` (Review-Punkte 03.11.), Head `729e3a1`
+- Status: Review-Punkte 03.11. (P1, P2) umgesetzt, siehe "Antwort auf Review 03.11.". Bereit für erneuten Codex-Review und lokalen Liberica-Build.
+
+## Antwort auf Review 03.11.
+
+### P1 (erneutes Wählen kann gespeicherte Auswahllisten leeren): umgesetzt
+Stimmt. `ModuleButton.actionPerformed()` ruft `populateOptions()` vor `setMainEditorsPaneView()`. `AddressPanel.populateOptions()` setzt über `ComponentUtils.populateOptionsCombobox()` für zwölf Auswahllisten (Anrede, Grußformel, Titel, Titel in der Anschrift, Nationalität, Land, Bundesland, Rechtsform, Grade, Beruf, Rolle) neue Modelle, die Auswahl springt auf den leeren ersten Eintrag. Danach hätte "Ja" auf die neue Rückfrage diese leeren Werte über den Kontakt gespeichert.
+Fix in `729e3a1`: `NewAddressPanel.populateOptions()` tut nichts, solange eine gespeicherte Adresse angezeigt wird (`isContactSaved()`). Nach dem Zurücksetzen ist die Adresse nicht mehr gespeichert, beim nächsten Anzeigen wird wieder normal befüllt. Andere Editoren und der normale Modulwechsel sind nicht betroffen.
+Bewusst nicht in `ModuleButton` oder `ComponentUtils` gelöst: das würde das Verhalten aller Editoren bzw. aller Auswahllisten ändern.
+Kein automatischer Test für diese Prüfung: `NewAddressPanel` lässt sich ohne Server nicht instanziieren (Konstruktor scheitert an `ServerSettings`, `this.mgmt` ist null, in einem Scratch-Programm ausprobiert). Die Prüfung ist eine einzelne Bedingung.
+
+### P2 (Dirty-Prüfung kann Änderungen verwerfen): umgesetzt
+Stimmt. `NewAddressPanel.isDirty()` prüft nur ausgewählte Felder auf "nicht leer", die Notiz z.B. nicht. Fix in `729e3a1`: für eine gespeicherte Adresse delegiert `isDirty()` an `AddressPanel.isDirty()`, das alle Felder mit dem gespeicherten DTO vergleicht. Das Beispiel aus dem Review (Nachname leeren, Notiz eintragen) meldet damit ungespeicherte Daten und führt zur Rückfrage.
+Die Aussage in pr.md, die Rückfrage komme nach dem Speichern über den Etiketten-Reiter immer, ist entfernt. Sie kommt jetzt nur bei Änderungen seit dem Speichern.
+Tests: die Rückfrage läuft jetzt über das package-private Feld `EditorsRegistry.reselectSaveQuestion` (Standard: der bisherige JOptionPane-Dialog). `EditorsRegistryReselectTest` hat 4 neue Tests für die Antworten Ja (speichert, setzt zurück), Ja mit fehlschlagendem Speichern (bleibt stehen), Nein (setzt ohne Speichern zurück) und Schließen (bleibt stehen), dazu prüft der bestehende Test für den unveränderten Editor, dass keine Rückfrage kommt. Die Delegation in `NewAddressPanel.isDirty()` selbst ist aus demselben Grund wie bei P1 nicht automatisch getestet.
+
+### Build nach den Änderungen
+`mvn -B -ntp -pl j-lawyer-client -am -Dmaven.test.failure.ignore=true -Dmaven.compiler.release= -Dmaven.compiler.source=17 -Dmaven.compiler.target=17 clean package` mit Ubuntu OpenJDK 17.0.20 plus OpenJFX 17.0.9 per jlink.
+
+| Modul | ausgeführt | fehlgeschlagen | Fehler | übersprungen |
+|---|---|---|---|---|
+| j-lawyer-fax | 23 | 0 | 0 | 0 |
+| j-lawyer-server-common | 104 | 17 | 0 | 0 |
+| j-lawyer-cloud | 4 | 0 | 0 | 0 |
+| j-lawyer-server-entities | 56 | 0 | 0 | 0 |
+| j-lawyer-client | 89 | 0 | 0 | 0 |
+| Summe | 276 | 17 | 0 | 0 |
+
+Die 17 Fehlschläge sind FtpTest (6), SftpTest (6), SmbTest (5), wie auf master. Der Branch basiert weiter auf master 7b3b3dfa8, `git merge-tree` gegen den aktuellen master 4dc03980f ist konfliktfrei (geprüft am 03.11. für 8fde5cd).
 
 ## Nachtrag 01.11.2026 (Codex-Review, Autor)
 - 02.11.: Der Orchestrator hat den Autor auf derspotter umgeschrieben (Head `8fde5cda0`). Damit ist der Nachtrag vom 01.11. für diesen Branch erledigt.
