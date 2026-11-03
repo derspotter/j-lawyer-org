@@ -15,9 +15,9 @@
 | `j-lawyer-server/j-lawyer-server-ejb/src/test/java/org/jlawyer/test/server/ejb/UpdateInvoiceWithoutTypeTest.java` | 779 | 0 |
 | total | 792 | 3 |
 
-## Build and tests (03.11.2026)
+## Build and tests
 
-JDK: Ubuntu OpenJDK 17.0.20 + OpenJFX 17.0.9 from Maven Central, combined with jlink. Maven 3.9.11. Branch and master 7b3b3dfa8 built with the identical command in the same container (master in a separate worktree):
+JDK: Ubuntu OpenJDK 17.0.20 + OpenJFX 17.0.9 from Maven Central, combined with jlink. Maven 3.9.11. Branch at commit 853000ac8 built (started 03.11.2026 08:39 UTC) and master 7b3b3dfa8 built (02.11.2026, in a separate worktree) with the identical command in the same container:
 
 ```
 mvn -B -ntp -pl j-lawyer-client,j-lawyer-server/j-lawyer-server-ejb -am -Dmaven.test.failure.ignore=true -Dmaven.compiler.release= -Dmaven.compiler.source=17 -Dmaven.compiler.target=17 clean package
@@ -68,3 +68,18 @@ Failing tests: identical to master
 
 ## Evidence 03.11.
 - Test run with plain javac + JUnit against the compiled EJB module of this worktree (classpath taken from the surefire report of the previous build): 1 of 1 passes. With `ArchiveFileService` from master 7b3b3dfa8 compiled in front of it, the test fails with `NullPointerException: Cannot invoke "...InvoiceType.getDisplayName()" because the return value of "...Invoice.getInvoiceType()" is null` at `ArchiveFileService.updateInvoice`.
+
+## Antwort auf Review 03.11. (2)
+1. [P3] Which evidence belongs to the final revision: agreed, now labelled.
+   - Reactor build: the build section above names the built commit and start time. It is 853000ac8 (the final revision, committed 03.11. 08:37 UTC), started 03.11. 08:39 UTC, finished 08:52 UTC, with the command shown there. `UpdateInvoiceWithoutTypeTest` is part of it and passes (counted in the j-lawyer-server-ejb row). The master build it is compared with is 7b3b3dfa8, built on 02.11. with the identical command. The sentence "Branch and master were rebuilt on 02.11." in the answer to the review of 02.11. refers to the builds of that day (commit cd71f8590) and is kept as history.
+   - The "Evidence 03.11." run in the morning used the classes of the 02.11. reactor build of cd71f8590. The final commit 853000ac8 only changes the test, so the production classes were the same, but the run is now repeated with the classes of the 853000ac8 build.
+   - Red check against master, repeated after the 853000ac8 build with the script below. It takes the test classpath recorded by surefire in the reactor build (`surefire.test.class.path` in a `TEST-*.xml` of j-lawyer-server-ejb, without the test-classes entry), compiles the test with `javac`, runs it with JUnit's `JUnitCore`, then compiles `ArchiveFileService.java` of master 7b3b3dfa8 into a separate directory and runs the test again with that directory in front of the classpath. Result: `OK (1 test)` with the branch classes, and with master's class `Tests run: 1, Failures: 1` with `NullPointerException: Cannot invoke "...InvoiceType.getDisplayName()" because the return value of "...Invoice.getInvoiceType()" is null` in `ArchiveFileService.updateInvoice`.
+
+```
+CP=$(python3 -I cp_from_surefire.py wt-3371/j-lawyer-server/j-lawyer-server-ejb)
+/opt/jdk17fx/bin/javac -encoding UTF-8 -nowarn -proc:none -d out/test -cp "$CP" wt-3371/j-lawyer-server/j-lawyer-server-ejb/src/test/java/org/jlawyer/test/server/ejb/UpdateInvoiceWithoutTypeTest.java
+/opt/jdk17fx/bin/java -cp "out/test:$CP" org.junit.runner.JUnitCore org.jlawyer.test.server.ejb.UpdateInvoiceWithoutTypeTest
+git -C wt-3371 show 7b3b3dfa8:j-lawyer-server/j-lawyer-server-ejb/src/main/java/com/jdimension/jlawyer/services/ArchiveFileService.java > out/src/com/jdimension/jlawyer/services/ArchiveFileService.java
+/opt/jdk17fx/bin/javac -encoding UTF-8 -nowarn -proc:none -d out/master -cp "$CP" out/src/com/jdimension/jlawyer/services/ArchiveFileService.java
+/opt/jdk17fx/bin/java -cp "out/test:out/master:$CP" org.junit.runner.JUnitCore org.jlawyer.test.server.ejb.UpdateInvoiceWithoutTypeTest
+```
