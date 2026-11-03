@@ -2,6 +2,7 @@
 
 - Branch: `fix/2592-restore-mariadb-collation` (fork derspotter/j-lawyer-org), base upstream/master 7b3b3dfa8
 - Commits (newest first):
+  - 82d2b1497 derspotter <jayjag@posteo.de> | fix(backup): Kollation wird nur noch in den Zeilen ersetzt, die mysqldump schreibt (SET-Anweisungen, COLLATE in CREATE TABLE und Views), andere SQL mit sql_mode, Kollationsvariablen oder der Kollation an anderer Stelle bricht die Wiederherstellung vor dem Löschen ab. Die Datenbanksicherung wird in ein neues Verzeichnis ausgepackt, eine alte Sicherung kann nicht mehr verwendet werden, und die Prüfung vor dem Löschen beachtet Groß- und Kleinschreibung nicht. Refs #2592
   - 7088e5caa derspotter <jayjag@posteo.de> | fix(backup): Kollation wird nicht ersetzt, wenn sql_mode in einem versionsabhängigen Teil einer Anweisung, ANSI_QUOTES oder Kollationsvariablen in Triggern oder Prozeduren das Ergebnis unsicher machen, dann bricht die Wiederherstellung vor dem Löschen ab, ebenso bei Fehlern beim Auspacken der Datenbanksicherung. Refs #2592
   - 8932d6b1b derspotter <jayjag@posteo.de> | fix(backup): Wiederherstellung bereitet die angepasste Datenbanksicherung vor dem Löschen des Datenverzeichnisses vor und lässt die Sicherung unverändert, nur der Eigentümer kann die Kopie lesen, Kollation nur nach COLLATE und in Kollationsvariablen, offene ausführbare Kommentare und sql_mode in versionsabhängigen Kommentaren verhindern das Ersetzen. Refs #2592
   - 0234d855d derspotter <jayjag@posteo.de> | fix(backup): Ersetzen der Kollation beachtet DELIMITER, SET-Anweisungen im Rumpf von Triggern und Prozeduren ändern den sql_mode nicht mehr. Refs #2592
@@ -14,15 +15,15 @@
 
 | File | + | - |
 |---|---|---|
-| `j-lawyer-backupmgr/src/main/java/org/jlawyer/backupmgr/impl/RestoreExecutor.java` | 89 | 12 |
-| `j-lawyer-backupmgr/src/main/java/org/jlawyer/backupmgr/impl/SqlDumpUtils.java` | 1438 | 0 |
-| `j-lawyer-backupmgr/src/test/java/org/jlawyer/test/backupmgr/RestorePreparationTest.java` | 718 | 0 |
-| `j-lawyer-backupmgr/src/test/java/org/jlawyer/test/backupmgr/SqlDumpUtilsTest.java` | 1260 | 0 |
-| total | 3505 | 12 |
+| `j-lawyer-backupmgr/src/main/java/org/jlawyer/backupmgr/impl/RestoreExecutor.java` | 86 | 12 |
+| `j-lawyer-backupmgr/src/main/java/org/jlawyer/backupmgr/impl/SqlDumpUtils.java` | 1122 | 0 |
+| `j-lawyer-backupmgr/src/test/java/org/jlawyer/test/backupmgr/RestorePreparationTest.java` | 748 | 0 |
+| `j-lawyer-backupmgr/src/test/java/org/jlawyer/test/backupmgr/SqlDumpUtilsTest.java` | 987 | 0 |
+| total | 2943 | 12 |
 
 ## Build and tests
 
-JDK: Ubuntu OpenJDK 17.0.20 + OpenJFX 17.0.9 from Maven Central, combined with jlink. Maven 3.9.11. Branch at commit 7088e5caa built (started 03.11.2026 19:20 UTC) and master 7b3b3dfa8 built (02.11.2026, in a separate worktree) with the identical command in the same container:
+JDK: Ubuntu OpenJDK 17.0.20 + OpenJFX 17.0.9 from Maven Central, combined with jlink. Maven 3.9.11. Branch at commit 82d2b1497 built (started 03.11.2026 20:08 UTC) and master 7b3b3dfa8 built (02.11.2026, in a separate worktree) with the identical command in the same container:
 
 ```
 mvn -B -ntp -pl j-lawyer-backupmgr -am -Dmaven.test.failure.ignore=true -Dmaven.compiler.release= -Dmaven.compiler.source=17 -Dmaven.compiler.target=17 clean package
@@ -30,8 +31,8 @@ mvn -B -ntp -pl j-lawyer-backupmgr -am -Dmaven.test.failure.ignore=true -Dmaven.
 
 | Module | branch total / executed / skipped / failed | master total / executed / skipped / failed |
 |---|---|---|
-| j-lawyer-backupmgr | 27 / 27 / 0 / 0 | n/a |
-| total | 27 / 27 / 0 / 0 | 0 / 0 / 0 / 0 |
+| j-lawyer-backupmgr | 8 / 8 / 0 / 0 | n/a |
+| total | 8 / 8 / 0 / 0 | 0 / 0 / 0 / 0 |
 
 Failing tests: identical to master
 
@@ -123,3 +124,69 @@ Antworten je Thread:
 - PRRT_kwDOCUQTLc6zRFZl: Behoben in 8932d6b1b und 7088e5caa: Ersetzt wird nach COLLATE und in Zuweisungen an collation_connection, collation_server und collation_database, nicht nach einem Punkt (auch mit Leerzeichen dazwischen, z.B. NEW. collation_connection). Im Rumpf eines Triggers oder einer Prozedur kann eine gleichnamige lokale Variable gemeint sein. Dort wird eine solche Zuweisung nicht ersetzt, und die Wiederherstellung bricht vor dem Löschen ab.
 - PRRT_kwDOCUQTLc6zRFaL: Behoben in 7088e5caa statt abgelehnt: Setzt die Sicherung einen sql_mode mit ANSI_QUOTES (auch über ANSI oder Sammelmodi wie ORACLE), wird nichts ersetzt und die Wiederherstellung bricht vor dem Löschen mit einer Meldung ab. Doppelte Anführungszeichen als Bezeichner werden nicht nachgebildet.
 - PRRT_kwDOCUQTLc6zRFbv: Behoben in 8932d6b1b und 7088e5caa, sicher statt nachgebildet: Ändert eine Anweisung den sql_mode und enthält sie irgendwo einen ausführbaren Kommentar, den der Zielserver vielleicht ignoriert (ab /*!50700 oder /*M!), wird nichts ersetzt und die Wiederherstellung bricht vor dem Löschen ab. Das gilt auch, wenn nur die Zuweisung im Kommentar steht. MariaDB 10.11.14 ignoriert /*!50700 und /*!80000 (geprüft mit SELECT).
+
+## Antwort auf Codex 03.11. (Runde 3)
+
+Neuer Commit: 82d2b1497.
+
+Build (Stand 82d2b1497, gestartet 03.11.2026 20:08 UTC, Ubuntu OpenJDK 17.0.20 mit OpenJFX 17.0.9, Maven 3.9.11):
+
+```
+mvn -B -ntp -pl j-lawyer-backupmgr -am -Dmaven.test.failure.ignore=true -Dmaven.compiler.release= -Dmaven.compiler.source=17 -Dmaven.compiler.target=17 clean package
+```
+
+Ergebnis: BUILD SUCCESS. 8 Tests gesamt, 8 ausgeführt, 0 übersprungen, 0 fehlgeschlagen. Keine fehlgeschlagenen Tests, wie auf master 7b3b3dfa8. Mit dem vorherigen Stand 7088e5caa schlagen 3 der 8 Tests fehl (testOtherSqlIsNotReplaced, testContainsTextIgnoresCase, testDumpOfAnEarlierRestoreIsNotUsed).
+
+Umbau: Der zeichenweise SQL-Lexer (DELIMITER-Verfolgung, sql_mode-Verfolgung mit gesicherten Modi, Versionen ausführbarer Kommentare, Erkennung von Rümpfen) ist entfernt. Stattdessen eine Liste der Zeilen, die mysqldump schreibt. INSERT INTO bis zur Zeile mit Semikolon am Ende bleibt unverändert (eine Anweisung je Zeile bei MySQL, ein Datensatz je Zeile bei MariaDB, das Docker-Image von j-lawyer installiert mariadb-client). SET-Anweisungen aus einfachen Zuweisungen am Anfang einer Anweisung ersetzen den Wert von collation_-Variablen und dürfen sql_mode nur auf ein Literal ohne NO_BACKSLASH_ESCAPES und ANSI_QUOTES setzen oder aus einer Variablen mit sql_mode im Namen wiederherstellen. Trigger-Rümpfe zwischen den DELIMITER-Befehlen bleiben unverändert. In allen anderen Zeilen wird nur nach COLLATE ersetzt, Zeichenketten, Bezeichner und Kommentare werden je Zeile erkannt. Jede Fundstelle des Namens, die so nicht ersetzt wird, jede andere Zeile mit sql_mode oder collation_ und jede Zeichenkette oder jeder Kommentar über das Zeilenende hinaus macht das Ergebnis unsicher. Das öffentliche replaceCollation für eine Datei an Ort und Stelle ist entfernt, die Wiederherstellung hat es nie verwendet.
+
+Die Punkte aus Runde 2:
+
+- P1 gesicherte Modi in versionsabhängigen Kommentaren: Wiederherstellen aus @saved ist nicht erlaubt (der Name enthält kein sql_mode), SET sql_mode='NO_BACKSLASH_ESCAPES' ebenso nicht. Das Beispiel ist unsicher (vorher 4 Ersetzungen, jetzt -1).
+- P1 ANSI_QUOTES: aneinandergereihte Literale, `sql_mode` in Backticks und SET/**/sql_mode passen nicht auf die SET-Form und erwähnen sql_mode, alle drei sind unsicher (vorher 3, 2 und 2 Ersetzungen).
+- P1 Großbuchstaben: containsText vergleicht ohne Beachtung der Groß- und Kleinschreibung wie das Ersetzen (neuer Test testContainsTextIgnoresCase). Das Beispiel mit ANSI_QUOTES und UTF8MB4_0900_AI_CI ist unsicher und wird gefunden.
+- P1 alte Datenbanksicherung: Ausgepackt wird in ein neues Verzeichnis jlawyerdb-restore-… im Sicherungsverzeichnis (rwx------, mit umask 022 geprüft), danach wird es gelöscht. Eine alte jlawyerdb-dump.sql wird nie verwendet, sie bleibt aber auch unangetastet. Neuer Test testDumpOfAnEarlierRestoreIsNotUsed (mit 7088e5caa wird das Datenverzeichnis gelöscht). Der vorhandene Test für ein nicht auspackbares Archiv nutzt jetzt ein beschädigtes Archiv, die Datei wird teilweise geschrieben, bevor der CRC-Fehler kommt.
+- P2 collation_connection als Spalte: Ersetzt wird nur in der SET-Form am Anfang einer Anweisung. Ansicht, UPDATE, t. mit 21 Leerzeichen und eine SET-Zeile nach einem UPDATE ohne Semikolon sind unsicher (vorher je 3 Ersetzungen).
+- P3 Antworten: Die Antworten unten nennen die Bedingungen für den Abbruch (Zielserver meldet die Kollation als unbekannt und die Sicherung enthält ihren Namen).
+- P3 Javadoc: Die Methode mit den Rechten gibt es nicht mehr. Die Beschreibung erwähnt keine Versionen von MariaDB mehr, das Ersetzen hängt nicht davon ab, welche ausführbaren Kommentare ein Server ausführt. Es gilt nur, dass eine Zeichenkette darin das Kommentarende nicht enthalten darf.
+
+Unsichere Fälle im Test (24): Mit 7088e5caa ergeben 22 davon Ersetzungen, nur ANSI_QUOTES mit der Kollation in Großbuchstaben und die am Ende abgeschnittene Sicherung waren dort schon unsicher. Echte Fehler dort waren die Gegenbeispiele aus Runde 2, t.collate als Spaltenname mit Alias und eine Zeichenkette mit */ in einem Kommentar für MySQL 8. Die übrigen wurden dort richtig behandelt (Name in Zeichenkette, Kommentar, Bezeichner, REPLACE und Trigger-Rumpf übersprungen, COLLATE nach einer Zeichenkette über zwei Zeilen ersetzt) oder enthalten nur einen Wechsel des sql_mode ohne spätere Zeichenkette. Sie gelten jetzt als unsicher, weil mysqldump sie nicht so schreibt.
+
+Ende-zu-Ende (MariaDB 10.11.14, RestoreExecutor.restore() mit den Klassen dieses Stands): Grundlage ist die j-lawyer-Datenbank der lokalen Testinstallation (101 Tabellen, Flyway 3.6.0.9) in einer Kopie e2esrc mit zusätzlicher Ansicht v_e2e (COLLATE in der Abfrage), Trigger trg_e2e und einem Datensatz mit dem Namen der Kollation in Groß- und Kleinschreibung, SET collation_connection, einem DELIMITER-Befehl, Backslash und Anführungszeichen. Mit mysqldump von MariaDB gesichert und in zwei Formate gebracht: MySQL 8 (Kopf von MySQL, eine Zeile je INSERT, ohne die Zeile für den Sandbox-Modus) und MariaDB-Client (unverändertes Format), jeweils utf8mb4_0900_ai_ci an 11 Tabellen, 2 Spalten, in der Ansicht und in beiden SET collation_connection. Ziel ist die Datenbank e2erestore.
+
+```
+mysql8        Kollation ... ersetzt (16 Stellen), Daten identisch mit e2esrc (1886 Datensätze), Ansicht 1, Trigger 1, Spalten mit 0900: 0
+mariaclient   Kollation ... ersetzt (16 Stellen), Daten identisch mit e2esrc (1886 Datensätze), Ansicht 1, Trigger 1, Spalten mit 0900: 0
+unbekannt     Abbruch: Der Datenbankserver kennt die Kollation utf8mb4_0900_ai_ci nicht ... nicht sicher ersetzt werden
+alte Sicherung  Abbruch: Die Datenbanksicherung konnte nicht vollständig ausgepackt werden
+```
+
+Unbekannt ist die mysql8-Sicherung mit zusätzlicher Zeile SET sql_mode='ANSI_QUOTES' nach dem Kopf. Alte Sicherung ist ein Archiv nur mit hinweis.txt und daneben die mysql8-Sicherung als jlawyerdb-dump.sql. In beiden Abbruchfällen enthält das Datenverzeichnis weiter archivefiles/case1/brief.pdf mit dem Inhalt, e2erestore hat weiter 103 Tabellen samt Markierungstabelle e2e_marker mit dem Wert 42, und im Sicherungsverzeichnis liegt kein jlawyerdb-restore-… mehr. Daten verglichen mit mysqldump --skip-comments --no-create-info --skip-triggers von Quelle und Ziel.
+
+numstat gegen master 7b3b3dfa8:
+
+```
+                                  vorher 7088e5caa   nachher 82d2b1497
+RestoreExecutor.java              +89 -12            +86 -12
+SqlDumpUtils.java (neu)           +1438              +1122
+RestorePreparationTest.java (neu) +718               +748
+SqlDumpUtilsTest.java (neu)       +1260              +987
+gesamt                            +3505 -12          +2943 -12
+ohne Lizenzkopf (662 Zeilen je neuer Datei)
+Code                              865                546
+Tests                             654                411
+zusammen                          1519               957
+```
+
+Diff von 7088e5caa auf 82d2b1497: 491 Zeilen hinzu, 1053 entfernt.
+
+pr.md ist angepasst: Fix beschreibt die Liste der Zeilen von mysqldump, das Verzeichnis zum Auspacken und die Gründe für ein unsicheres Ergebnis. Verifiziert nennt die 8 Tests, die 3 Fehlschläge mit 7088e5caa und den Ende-zu-Ende-Test mit beiden Formaten. Unter Nicht abgedeckt entfällt der Punkt zu replaceCollation an Ort und Stelle. Neu sind dort die nachgebauten Sicherungen statt einer echten von MySQL 8, der Abbruch bei Trigger-Rümpfen mit dem Namen der Kollation und bei Sicherungen, die nicht von mysqldump stammen, und das Verzeichnis, das bei einem harten Abbruch zurückbleibt.
+
+Antworten je Thread:
+
+- PRRT_kwDOCUQTLc6zRFYL: Behoben in 8932d6b1b, 7088e5caa und 82d2b1497: Die Datenbanksicherung wird vor dem Leeren des Datenverzeichnisses in ein neu angelegtes Verzeichnis ausgepackt, eine jlawyerdb-dump.sql von einer früheren Wiederherstellung wird nie verwendet. Die Wiederherstellung bricht ab, bevor etwas gelöscht wird, wenn beim Auspacken eine Datei nicht geschrieben werden kann oder das Archiv keine Datenbanksicherung enthält, wenn das Schreiben der angepassten Kopie scheitert, und wenn der Zielserver die Kollation als unbekannt meldet, die Sicherung ihren Namen in beliebiger Schreibweise enthält und sie nicht sicher angepasst werden kann. Kennt der Zielserver die Kollation oder scheitert diese Prüfung, wird die Sicherung wie bisher unverändert eingespielt. Die Sicherung selbst bleibt unverändert, das Verzeichnis zum Auspacken wird danach gelöscht.
+- PRRT_kwDOCUQTLc6zRFZF: Behoben in 8932d6b1b und 82d2b1497: Die angepasste Kopie wird mit den Rechten rw------- in einem Verzeichnis mit rwx------ angelegt, wo das Dateisystem POSIX-Rechte kennt. Das Ersetzen an Ort und Stelle gibt es nicht mehr, die Wiederherstellung hat es nie verwendet.
+- PRRT_kwDOCUQTLc6zRFZl: Behoben in 82d2b1497: Der Wert einer collation_-Variable wird nur noch in SET-Anweisungen ersetzt, die am Anfang einer Anweisung stehen und nur aus einfachen Zuweisungen bestehen, wie mysqldump sie schreibt. Erwähnt eine andere Zeile collation_ oder steht der Name der Kollation an einer anderen Stelle als nach COLLATE (z.B. collation_connection als Spalte in einer Ansicht oder einem UPDATE, auch nach t. mit beliebig vielen Leerzeichen), wird nichts ersetzt. Meldet der Zielserver die Kollation als unbekannt, bricht die Wiederherstellung dann vor dem Löschen ab.
+- PRRT_kwDOCUQTLc6zRFaL: Behoben in 7088e5caa und 82d2b1497: sql_mode wird nur in SET-Anweisungen wie denen von mysqldump akzeptiert, mit genau einem Literal ohne ANSI_QUOTES und NO_BACKSLASH_ESCAPES. Jede andere Zeile, die sql_mode erwähnt (aneinandergereihte Literale, sql_mode in Backticks, SET direkt nach einem Kommentar), macht das Ergebnis unsicher und es wird nichts ersetzt. Meldet der Zielserver die Kollation als unbekannt und enthält die Sicherung ihren Namen, bricht die Wiederherstellung dann vor dem Löschen ab. Kennt der Zielserver die Kollation, wird die Sicherung unverändert eingespielt wie ohne diesen PR.
+- PRRT_kwDOCUQTLc6zRFbv: Behoben in 82d2b1497, ohne Versionen nachzubilden: Ein Literal für sql_mode darf weder NO_BACKSLASH_ESCAPES noch ANSI_QUOTES enthalten, wiederhergestellt werden darf sql_mode nur aus einer Variablen, deren Name sql_mode enthält (wie @OLD_SQL_MODE und @saved_sql_mode bei mysqldump), und jede andere Zeile mit sql_mode macht das Ergebnis unsicher. Damit hängt das Lesen von Zeichenketten nicht mehr davon ab, welche versionsabhängigen Kommentare der Zielserver ausführt. Für ausführbare Kommentare gilt nur noch, dass eine Zeichenkette darin das Kommentarende nicht enthalten darf. Das Beispiel aus dem Review ist unsicher. Meldet der Zielserver die Kollation als unbekannt und enthält die Sicherung ihren Namen, bricht die Wiederherstellung vor dem Löschen ab.
+- PRRT_kwDOCUQTLc6zRFbR: Ergänzung zu 82d2b1497: Ein Wert in Anführungszeichen wird weiterhin nicht umgeschrieben. Statt erst beim Einspielen mit Fehler 1273 zu scheitern, gilt das Ergebnis jetzt als unsicher. Meldet der Zielserver die Kollation als unbekannt, bricht die Wiederherstellung vor dem Löschen ab.
+- PRRT_kwDOCUQTLc6zRFcO (nicht angefragt, die gepostete Antwort stimmt sonst nicht mehr ganz): Ergänzung zu 82d2b1497: Ein Kommentar /* … */ zwischen COLLATE und dem Namen zählt weiter wie Leerraum. Stehen COLLATE und der Name in verschiedenen Zeilen (z.B. mit -- oder # dazwischen), wird nichts ersetzt, mysqldump schreibt das nicht. Meldet der Zielserver die Kollation als unbekannt, bricht die Wiederherstellung dann vor dem Löschen ab.
