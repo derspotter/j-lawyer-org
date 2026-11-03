@@ -2,6 +2,7 @@
 
 - Branch: `fix/3507-pdf-teile-ohne-verweise-auf-original` (fork derspotter/j-lawyer-org), base upstream/master 7b3b3dfa8
 - Commits (newest first):
+  - fb22fb03f derspotter <jayjag@posteo.de> | fix(documents): PDF aufteilen schreibt keine Formularfelder anderer Seiten mehr in den Teil, auch wenn sie über ein gemeinsames übergeordnetes Feld erreichbar sind. Refs #3507
   - 08a6997f4 derspotter <jayjag@posteo.de> | fix(documents): PDF aufteilen prüft alle gespeicherten Objekte des Teils, Verweise auf behaltene Seiten zeigen auf deren Kopie, Seitenaktionen und Artikel ziehen keine anderen Seiten mehr mit. Refs #3507
   - 4a23eb664 derspotter <jayjag@posteo.de> | fix(documents): PDF aufteilen entfernt auch Verweise über Formularfelder, Folgeaktionen, Antworten und Popups, doppelte Seitenzahlen ergeben keinen leeren Teil. Refs #3507
   - 17ccae1e0 derspotter <jayjag@posteo.de> | fix(documents): PDF aufteilen schreibt nur noch die Seiten des jeweiligen Teils in die Teil-PDFs. Closes #3507
@@ -11,13 +12,13 @@
 | File | + | - |
 |---|---|---|
 | `j-lawyer-client/src/main/java/com/jdimension/jlawyer/client/editors/files/ArchiveFilePanel.java` | 11 | 18 |
-| `j-lawyer-client/src/main/java/com/jdimension/jlawyer/client/utils/pdf/PdfSplitUtils.java` | 917 | 0 |
-| `j-lawyer-client/src/test/java/org/jlawyer/test/client/utils/PdfSplitUtilsTest.java` | 1030 | 0 |
-| total | 1958 | 18 |
+| `j-lawyer-client/src/main/java/com/jdimension/jlawyer/client/utils/pdf/PdfSplitUtils.java` | 991 | 0 |
+| `j-lawyer-client/src/test/java/org/jlawyer/test/client/utils/PdfSplitUtilsTest.java` | 1131 | 0 |
+| total | 2133 | 18 |
 
-## Build and tests (03.11.2026)
+## Build and tests
 
-JDK: Ubuntu OpenJDK 17.0.20 + OpenJFX 17.0.9 from Maven Central, combined with jlink. Maven 3.9.11. Branch and master 7b3b3dfa8 built with the identical command in the same container (master in a separate worktree):
+JDK: Ubuntu OpenJDK 17.0.20 + OpenJFX 17.0.9 from Maven Central, combined with jlink. Maven 3.9.11. Branch at commit fb22fb03f built (started 03.11.2026 18:34 UTC) and master 7b3b3dfa8 built (02.11.2026, in a separate worktree) with the identical command in the same container:
 
 ```
 mvn -B -ntp -pl j-lawyer-client -am -Dmaven.test.failure.ignore=true -Dmaven.compiler.release= -Dmaven.compiler.source=17 -Dmaven.compiler.target=17 clean package
@@ -25,12 +26,12 @@ mvn -B -ntp -pl j-lawyer-client -am -Dmaven.test.failure.ignore=true -Dmaven.com
 
 | Module | branch total / executed / skipped / failed | master total / executed / skipped / failed |
 |---|---|---|
-| j-lawyer-client | 92 / 92 / 0 / 0 | 81 / 81 / 0 / 0 |
+| j-lawyer-client | 93 / 93 / 0 / 0 | 81 / 81 / 0 / 0 |
 | j-lawyer-cloud | 4 / 4 / 0 / 0 | 4 / 4 / 0 / 0 |
 | j-lawyer-fax | 23 / 23 / 0 / 0 | 23 / 23 / 0 / 0 |
 | j-lawyer-server-common | 104 / 104 / 0 / 17 | 104 / 104 / 0 / 17 |
 | j-lawyer-server-entities | 56 / 56 / 0 / 0 | 56 / 56 / 0 / 0 |
-| total | 279 / 279 / 0 / 17 | 268 / 268 / 0 / 17 |
+| total | 280 / 280 / 0 / 17 | 268 / 268 / 0 / 17 |
 
 Failing tests: identical to master
 
@@ -69,3 +70,21 @@ Failing tests: identical to master
 ## Evidence 03.11.
 - Red check (plain javac + JUnit 4.12, PDFBox 2.0.24): with `PdfSplitUtils` from 4a23eb664 and the new test class, 5 of 11 tests fail (`testAllRangesKeepExactlyTheirPages` with `pages 1 - 1 expected:<1> but was:<6>`, `testPageActionsToOtherPages`, `testArticleThreadAcrossParts` and `testChainedActionToKeptPageUsesTheCopy` with `expected:<2> but was:<7>`, `testSecondPartOfTheSameSource` with `expected:<3> but was:<8>`). With 08a6997f4 all 11 pass.
 - Probe with real PDFs (same harness): the 8 forms in `j-lawyer-server-ejb/src/main/resources/zvfv/2024-09-01` and `doc/forderungskonto-und-mahnverfahren.pdf`, split at every page boundary into a front and a back part, 76 parts in total. For each part: page count, text of every page (PDFTextStripper, compared with the source page) and number of page objects are correct. For each file the largest part has exactly the same size in bytes as with the 02.11. version, so for these documents the new traversal changes nothing.
+
+## Antwort auf Copilot-Review 03.11.
+
+Neue Commits: fb22fb03f.
+
+Build (Stand fb22fb03f, gestartet 03.11.2026 18:34 UTC, Ubuntu OpenJDK 17.0.20 mit OpenJFX 17.0.9, Maven 3.9.11):
+
+```
+mvn -B -ntp -pl j-lawyer-client -am -Dmaven.test.failure.ignore=true -Dmaven.compiler.release= -Dmaven.compiler.source=17 -Dmaven.compiler.target=17 clean package
+```
+
+Ergebnis: BUILD SUCCESS. 280 Tests gesamt, 280 ausgeführt, 0 übersprungen, 17 fehlgeschlagen. Die fehlgeschlagenen Tests sind dieselben wie auf master 7b3b3dfa8 (siehe Build and tests), die neuen Tests bestehen.
+
+Der Commit fb22fb03f übernimmt den ungetesteten Entwurf 45f0935fb der lokalen Lane (wip/3507-acroform-local) mit neuer Commit-Nachricht. Geprüft wie eigene Arbeit: 12 von 12 Tests bestehen, mit 08a6997f4 schlägt der neue Test fehl (Wert Seite 5 im Teil). Die 9 echten PDFs (zvfv-Formulare und doc/forderungskonto-und-mahnverfahren.pdf) ergeben an jeder Seitengrenze weiterhin genau ihre Seiten mit gleichem Text. pr.md ist ergänzt.
+
+Antworten je Thread:
+
+- PRRT_kwDOCUQTLc6zRA4O: Behoben in fb22fb03f: Formularfelder ohne Widget auf einer Seite des Teils werden samt /V und /DV entfernt, auch wenn ein behaltenes Widget sie über /Parent und /Kids erreicht. Behalten wird ein Feld, wenn es selbst oder ein Nachfahre ein Widget auf einer behaltenen Seite ist. Neuer Test mit drei Nachbarfeldern mit unterschiedlichen Werten, er prüft Datenströme und Zeichenketten in allen Objekten und schlägt mit dem vorherigen Stand fehl.
