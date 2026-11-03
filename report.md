@@ -2,6 +2,7 @@
 
 - Branch: `fix/2592-restore-mariadb-collation` (fork derspotter/j-lawyer-org), base upstream/master 7b3b3dfa8
 - Commits (newest first):
+  - 0234d855d derspotter <jayjag@posteo.de> | fix(backup): Ersetzen der Kollation beachtet DELIMITER, SET-Anweisungen im Rumpf von Triggern und Prozeduren ändern den sql_mode nicht mehr. Refs #2592
   - 6b1a9d097 derspotter <jayjag@posteo.de> | fix(backup): Ersetzen der Kollation beachtet NO_BACKSLASH_ESCAPES in Triggern aus der Sicherung, Tests prüfen den Speicherbedarf bei großen Datensätzen. Refs #2592
   - 25b452efb derspotter <jayjag@posteo.de> | fix(backup): Kollation wird nur noch im SQL-Code ersetzt, nicht in Zeichenketten, Bezeichnern und Kommentaren, und die Sicherung wird ohne Zwischenspeichern ganzer Zeilen verarbeitet. Refs #2592
   - 198715355 derspotter <jayjag@posteo.de> | fix(backup): Kollation nur in den SQL-Anweisungen ersetzen und nur, wenn der Zielserver sie nicht kennt. Refs #2592
@@ -12,13 +13,13 @@
 | File | + | - |
 |---|---|---|
 | `j-lawyer-backupmgr/src/main/java/org/jlawyer/backupmgr/impl/RestoreExecutor.java` | 33 | 0 |
-| `j-lawyer-backupmgr/src/main/java/org/jlawyer/backupmgr/impl/SqlDumpUtils.java` | 1179 | 0 |
-| `j-lawyer-backupmgr/src/test/java/org/jlawyer/test/backupmgr/SqlDumpUtilsTest.java` | 1042 | 0 |
-| total | 2254 | 0 |
+| `j-lawyer-backupmgr/src/main/java/org/jlawyer/backupmgr/impl/SqlDumpUtils.java` | 1233 | 0 |
+| `j-lawyer-backupmgr/src/test/java/org/jlawyer/test/backupmgr/SqlDumpUtilsTest.java` | 1108 | 0 |
+| total | 2374 | 0 |
 
 ## Build and tests
 
-JDK: Ubuntu OpenJDK 17.0.20 + OpenJFX 17.0.9 from Maven Central, combined with jlink. Maven 3.9.11. Branch at commit 6b1a9d097 built (started 03.11.2026 09:41 UTC) and master 7b3b3dfa8 built (02.11.2026, in a separate worktree) with the identical command in the same container:
+JDK: Ubuntu OpenJDK 17.0.20 + OpenJFX 17.0.9 from Maven Central, combined with jlink. Maven 3.9.11. Branch at commit 0234d855d built (started 03.11.2026 12:54 UTC) and master 7b3b3dfa8 built (02.11.2026, in a separate worktree) with the identical command in the same container:
 
 ```
 mvn -B -ntp -pl j-lawyer-backupmgr -am -Dmaven.test.failure.ignore=true -Dmaven.compiler.release= -Dmaven.compiler.source=17 -Dmaven.compiler.target=17 clean package
@@ -26,8 +27,8 @@ mvn -B -ntp -pl j-lawyer-backupmgr -am -Dmaven.test.failure.ignore=true -Dmaven.
 
 | Module | branch total / executed / skipped / failed | master total / executed / skipped / failed |
 |---|---|---|
-| j-lawyer-backupmgr | 12 / 12 / 0 / 0 | n/a |
-| total | 12 / 12 / 0 / 0 | 0 / 0 / 0 / 0 |
+| j-lawyer-backupmgr | 15 / 15 / 0 / 0 | n/a |
+| total | 15 / 15 / 0 / 0 | 0 / 0 / 0 / 0 |
 
 Failing tests: identical to master
 
@@ -62,3 +63,11 @@ Failing tests: identical to master
 ## Evidence 03.11. (2)
 - `SqlDumpUtilsTest`: plain javac + JUnit 4.12, 12 of 12 pass in 3.5 s. With `SqlDumpUtils` from 25b452efb: `testTriggerWithNoBackslashEscapes` fails (the collation inside the trigger's string literal is replaced), the other 11 pass.
 - Low-memory run, `java -Xmx32m` with a 48 MiB row: 198715355 `OutOfMemoryError: Java heap space`, 25b452efb `replaced 2`, 6b1a9d097 `replaced 2`.
+
+## Antwort auf Review 03.11. (3)
+1. [P2] Semicolons inside stored-program bodies: agreed, reproduced and fixed. The scanner now ends statements at the client's delimiter like the mysql client: a statement whose first word is `DELIMITER` takes the first token of the rest of its line as the new delimiter (mysqldump switches to two semicolons before a trigger or routine and back to one after it, `DELIMITER $$` works the same way). So the body of a trigger or procedure is one statement whose first word is CREATE, and the SET statements in it are never evaluated, as the server does not execute them when creating the program. In addition, an assignment target directly after a dot (`NEW.sql_mode`, `t.sql_mode`) is not taken for the system variable. New regressions: `testSetInProcedureBodyDoesNotChangeTheMode` (the reviewer's procedure under `sql_mode=''`, with two literals and with one), `testCompoundTriggerAssigningAColumnNamedSqlMode` (BEGIN ... END trigger with `SET NEW.sql_mode` before literals with `\'`) and `testOtherDelimiter` (`DELIMITER $$`). All three check the result for reads of 1, 8, 64, 512, 4096 and 32768 characters. With 6b1a9d097 they fail with 4 instead of 3 replacements (a literal rewritten) and with -1 (dump taken for incomplete). On MariaDB 10.11.14 a processed dump with such a procedure and trigger loads, both bodies keep their literals, the trigger fills the column and the procedure returns both strings.
+2. [P3] Test count in pr.md: fixed, it now says 15 (the class has 15 tests after the three new ones).
+
+## Evidence 03.11. (3)
+- `SqlDumpUtilsTest`: plain javac + JUnit 4.12, 15 of 15 pass. With `SqlDumpUtils` from 6b1a9d097: the three new tests fail (`expected:<3> but was:<4>` twice, `expected:<3> but was:<-1>` once), the other 12 pass.
+- MariaDB 10.11.14: processed dump (3 replacements: column and table of `t`, table of `u`) loads with exit 0. `information_schema.routines` and `information_schema.triggers` show the bodies with `'it''s COLLATE utf8mb4_0900_ai_ci'` (the server normalises the escaped quote), inserting into `t` gives `it's COLLATE utf8mb4_0900_ai_ciit's COLLATE utf8mb4_0900_ai_ci`, `CALL p()` returns both strings.
