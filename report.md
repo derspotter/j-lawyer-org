@@ -2,6 +2,7 @@
 
 - Branch: `fix/3507-pdf-teile-ohne-verweise-auf-original` (fork derspotter/j-lawyer-org), base upstream/master 7b3b3dfa8
 - Commits (newest first):
+  - 08a6997f4 derspotter <jayjag@posteo.de> | fix(documents): PDF aufteilen prüft alle gespeicherten Objekte des Teils, Verweise auf behaltene Seiten zeigen auf deren Kopie, Seitenaktionen und Artikel ziehen keine anderen Seiten mehr mit. Refs #3507
   - 4a23eb664 derspotter <jayjag@posteo.de> | fix(documents): PDF aufteilen entfernt auch Verweise über Formularfelder, Folgeaktionen, Antworten und Popups, doppelte Seitenzahlen ergeben keinen leeren Teil. Refs #3507
   - 17ccae1e0 derspotter <jayjag@posteo.de> | fix(documents): PDF aufteilen schreibt nur noch die Seiten des jeweiligen Teils in die Teil-PDFs. Closes #3507
 
@@ -10,11 +11,11 @@
 | File | + | - |
 |---|---|---|
 | `j-lawyer-client/src/main/java/com/jdimension/jlawyer/client/editors/files/ArchiveFilePanel.java` | 11 | 18 |
-| `j-lawyer-client/src/main/java/com/jdimension/jlawyer/client/utils/pdf/PdfSplitUtils.java` | 799 | 0 |
-| `j-lawyer-client/src/test/java/org/jlawyer/test/client/utils/PdfSplitUtilsTest.java` | 831 | 0 |
-| total | 1641 | 18 |
+| `j-lawyer-client/src/main/java/com/jdimension/jlawyer/client/utils/pdf/PdfSplitUtils.java` | 917 | 0 |
+| `j-lawyer-client/src/test/java/org/jlawyer/test/client/utils/PdfSplitUtilsTest.java` | 1030 | 0 |
+| total | 1958 | 18 |
 
-## Build and tests (02.11.2026)
+## Build and tests (03.11.2026)
 
 JDK: Ubuntu OpenJDK 17.0.20 + OpenJFX 17.0.9 from Maven Central, combined with jlink. Maven 3.9.11. Branch and master 7b3b3dfa8 built with the identical command in the same container (master in a separate worktree):
 
@@ -24,12 +25,12 @@ mvn -B -ntp -pl j-lawyer-client -am -Dmaven.test.failure.ignore=true -Dmaven.com
 
 | Module | branch total / executed / skipped / failed | master total / executed / skipped / failed |
 |---|---|---|
-| j-lawyer-client | 87 / 87 / 0 / 0 | 81 / 81 / 0 / 0 |
+| j-lawyer-client | 92 / 92 / 0 / 0 | 81 / 81 / 0 / 0 |
 | j-lawyer-cloud | 4 / 4 / 0 / 0 | 4 / 4 / 0 / 0 |
 | j-lawyer-fax | 23 / 23 / 0 / 0 | 23 / 23 / 0 / 0 |
 | j-lawyer-server-common | 104 / 104 / 0 / 17 | 104 / 104 / 0 / 17 |
 | j-lawyer-server-entities | 56 / 56 / 0 / 0 | 56 / 56 / 0 / 0 |
-| total | 274 / 274 / 0 / 17 | 268 / 268 / 0 / 17 |
+| total | 279 / 279 / 0 / 17 | 268 / 268 / 0 / 17 |
 
 Failing tests: identical to master
 
@@ -58,3 +59,13 @@ Failing tests: identical to master
 ## Evidence
 - Red check (plain javac + JUnit, PDFBox 2.0.24): with the 01.11. version of `extractPages()` (Splitter only) `testFormFieldWithWidgetsOnOtherPages` and `testChainedActionToOtherPage` fail with `expected:<2> but was:<7>`. With this branch all 6 tests pass.
 - 82-page LibreOffice PDF with linked TOC (235 KB): parts 1-3 / 4-82 / 11-11 / 1-82 give 3 / 79 / 1 / 82 page objects (36 / 117 / 25 / 130 KB). With the old importPage loop part 1-3 had 85 page objects (130 KB).
+
+## Antwort auf Review 03.11.
+1. [P1] Retained source pages: agreed, reproduced (GoTo with /Next to the kept page 2, and an article bead on page 1, both 7 page objects with 4a23eb664) and fixed in 08a6997f4. `extractPages()` no longer skips page dictionaries. It maps every kept source page to its copy in the part (identity map source page to part page) and replaces references to it, so these actions and beads now point to the part's own pages. The tests `testChainedActionToKeptPageUsesTheCopy` and `testArticleThreadAcrossParts` assert both the page objects and the redirected target.
+2. [P1] Page actions and other paths: agreed, fixed in 08a6997f4. Instead of walking only /Annots and /B, the cleaner now walks everything reachable from the part's trailer, which is exactly what `PDDocument.save()` writes (catalog, page tree, all entries of the copied page dictionaries including /AA, /B, /Annots, /Resources, and the document info). References to excluded pages, to their annotations and to all nodes of the source page tree are removed. As a safety net, any other dictionary of type /Page or /Pages that does not belong to the part's own page tree is removed too. Regressions: `testPageActionsToOtherPages` (open action of page 1 to page 5, close action of page 2 to page 1), `testSecondPartOfTheSameSource`, and `testAllRangesKeepExactlyTheirPages` (all 15 ranges of a 5-page document that has a link, a form field on pages 1 and 5, a chained action, an article thread from page 1 to page 5 and page actions, checking page count, page objects, page order and that no stream contains the text of another page). The traversal is iterative so long bead or action chains cannot overflow the stack. pr.md no longer says that references outside annotations are left alone.
+3. PR title and the original commit summary: the title "schreibt nur noch die Seiten des jeweiligen Teils" is now backed by the trailer-wide check, and pr.md says what it covers and what is left (JavaScript actions that address pages by number, resources a kept page shares with other pages). The first commit 17ccae1e0 cannot be reworded without rewriting history, which the rules exclude. Its summary is superseded by the later commits and the PR text.
+4. [P3] SMB test prerequisites: agreed. FtpTest and SftpTest read their credentials from environment variables, SmbTest uses the hard-coded share smb://j-lawyer-box/j-lawyer-share/. pr.md now says this.
+
+## Evidence 03.11.
+- Red check (plain javac + JUnit 4.12, PDFBox 2.0.24): with `PdfSplitUtils` from 4a23eb664 and the new test class, 5 of 11 tests fail (`testAllRangesKeepExactlyTheirPages` with `pages 1 - 1 expected:<1> but was:<6>`, `testPageActionsToOtherPages`, `testArticleThreadAcrossParts` and `testChainedActionToKeptPageUsesTheCopy` with `expected:<2> but was:<7>`, `testSecondPartOfTheSameSource` with `expected:<3> but was:<8>`). With 08a6997f4 all 11 pass.
+- Probe with real PDFs (same harness): the 8 forms in `j-lawyer-server-ejb/src/main/resources/zvfv/2024-09-01` and `doc/forderungskonto-und-mahnverfahren.pdf`, split at every page boundary into a front and a back part, 76 parts in total. For each part: page count, text of every page (PDFTextStripper, compared with the source page) and number of page objects are correct. For each file the largest part has exactly the same size in bytes as with the 02.11. version, so for these documents the new traversal changes nothing.
