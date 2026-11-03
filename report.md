@@ -1,8 +1,18 @@
 # Report #1283: Adressen - neu nach Speichern über den Etiketten-Reiter
 
 - Branch: `fix/1283-new-contact-after-tag-save` (Basis: upstream/master 7b3b3dfa8)
-- Commits: `8fde5cd` (Fix, Autor vom Orchestrator umgeschrieben), `729e3a1` (Review-Punkte 03.11.), Head `729e3a1`
-- Status: Review-Punkte 03.11. (P1, P2) umgesetzt, siehe "Antwort auf Review 03.11.". Bereit für erneuten Codex-Review und lokalen Liberica-Build.
+- Commits: `8fde5cd` (Fix, Autor vom Orchestrator umgeschrieben), `729e3a1` (Review-Punkte 03.11.), `96ccf89` (fehlgeschlagenes Speichern, Review 03.11. (2)), Head `96ccf89`
+- Status: Review 03.11. (2) umgesetzt (siehe "Antwort auf Review 03.11. (2)"). Bereit für erneuten Codex-Review und lokalen Liberica-Build.
+
+## Antwort auf Review 03.11. (2)
+
+### [P2] Fehlgeschlagenes Speichern macht ungespeicherte Änderungen scheinbar sauber: umgesetzt
+Stimmt. `AddressPanel.save()` setzt `this.dto = new AddressBean()` und füllt es mit den Eingaben, bevor `updateAddress()` aufgerufen wird. Wirft der Server, blieb dieses ungespeicherte DTO stehen, `AddressPanel.isDirty()` verglich die Eingaben mit sich selbst, und ein zweites "Adressen - neu" setzte ohne Rückfrage zurück.
+Fix in `96ccf89`: `save()` merkt sich vor dem Ersetzen das bisherige DTO (`lastSaved`) und stellt es im catch-Block wieder her. Danach vergleicht `isDirty()` wieder gegen den zuletzt gespeicherten Stand, die Änderungen gelten weiter als ungespeichert, und das erneute Wählen fragt wieder nach. Das betrifft alle Adress-Editoren gleich (auch die Bearbeiten-Ansicht hatte dieselbe Lücke in ihrer Dirty-Prüfung), andere Pfade von `save()` bleiben unverändert.
+Test: `reselectingDirtyEditorKeepsItWhenSavingFails` wählt den Editor nach dem fehlgeschlagenen Speichern ein zweites Mal und prüft, dass wieder gefragt und nicht zurückgesetzt wird. Wie der Review richtig anmerkt, bleibt der Test-Editor dabei immer dirty. Er prüft also die Registry-Seite des Ablaufs, nicht die Wiederherstellung in `AddressPanel.save()`. Die lässt sich ohne Server nicht testen (AddressPanel ist ohne Server nicht instanziierbar, siehe P1 vom 03.11.).
+
+### Build Head `96ccf89`
+`mvn -B -ntp -pl j-lawyer-client -am -Dmaven.test.failure.ignore=true -Dmaven.compiler.release= -Dmaven.compiler.source=17 -Dmaven.compiler.target=17 clean package`: 276 ausgeführt, 17 fehlgeschlagen (FtpTest 6, SftpTest 6, SmbTest 5, wie auf master), 0 Fehler, 0 übersprungen. Client 89 ausgeführt, 0 fehlgeschlagen (EditorsRegistryReselectTest 8). `git merge-tree` gegen den aktuellen master 913123ae9: Exit 0.
 
 ## Antwort auf Review 03.11.
 
