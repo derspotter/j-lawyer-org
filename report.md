@@ -2,6 +2,7 @@
 
 - Branch: `fix/2592-restore-mariadb-collation` (fork derspotter/j-lawyer-org), base upstream/master 7b3b3dfa8
 - Commits (newest first):
+  - 7088e5caa derspotter <jayjag@posteo.de> | fix(backup): Kollation wird nicht ersetzt, wenn sql_mode in einem versionsabhängigen Teil einer Anweisung, ANSI_QUOTES oder Kollationsvariablen in Triggern oder Prozeduren das Ergebnis unsicher machen, dann bricht die Wiederherstellung vor dem Löschen ab, ebenso bei Fehlern beim Auspacken der Datenbanksicherung. Refs #2592
   - 8932d6b1b derspotter <jayjag@posteo.de> | fix(backup): Wiederherstellung bereitet die angepasste Datenbanksicherung vor dem Löschen des Datenverzeichnisses vor und lässt die Sicherung unverändert, nur der Eigentümer kann die Kopie lesen, Kollation nur nach COLLATE und in Kollationsvariablen, offene ausführbare Kommentare und sql_mode in versionsabhängigen Kommentaren verhindern das Ersetzen. Refs #2592
   - 0234d855d derspotter <jayjag@posteo.de> | fix(backup): Ersetzen der Kollation beachtet DELIMITER, SET-Anweisungen im Rumpf von Triggern und Prozeduren ändern den sql_mode nicht mehr. Refs #2592
   - 6b1a9d097 derspotter <jayjag@posteo.de> | fix(backup): Ersetzen der Kollation beachtet NO_BACKSLASH_ESCAPES in Triggern aus der Sicherung, Tests prüfen den Speicherbedarf bei großen Datensätzen. Refs #2592
@@ -13,14 +14,15 @@
 
 | File | + | - |
 |---|---|---|
-| `j-lawyer-backupmgr/src/main/java/org/jlawyer/backupmgr/impl/RestoreExecutor.java` | 72 | 12 |
-| `j-lawyer-backupmgr/src/main/java/org/jlawyer/backupmgr/impl/SqlDumpUtils.java` | 1336 | 0 |
-| `j-lawyer-backupmgr/src/test/java/org/jlawyer/test/backupmgr/SqlDumpUtilsTest.java` | 1209 | 0 |
-| total | 2617 | 12 |
+| `j-lawyer-backupmgr/src/main/java/org/jlawyer/backupmgr/impl/RestoreExecutor.java` | 89 | 12 |
+| `j-lawyer-backupmgr/src/main/java/org/jlawyer/backupmgr/impl/SqlDumpUtils.java` | 1438 | 0 |
+| `j-lawyer-backupmgr/src/test/java/org/jlawyer/test/backupmgr/RestorePreparationTest.java` | 718 | 0 |
+| `j-lawyer-backupmgr/src/test/java/org/jlawyer/test/backupmgr/SqlDumpUtilsTest.java` | 1260 | 0 |
+| total | 3505 | 12 |
 
 ## Build and tests
 
-JDK: Ubuntu OpenJDK 17.0.20 + OpenJFX 17.0.9 from Maven Central, combined with jlink. Maven 3.9.11. Branch at commit 8932d6b1b built (started 03.11.2026 18:44 UTC) and master 7b3b3dfa8 built (02.11.2026, in a separate worktree) with the identical command in the same container:
+JDK: Ubuntu OpenJDK 17.0.20 + OpenJFX 17.0.9 from Maven Central, combined with jlink. Maven 3.9.11. Branch at commit 7088e5caa built (started 03.11.2026 19:20 UTC) and master 7b3b3dfa8 built (02.11.2026, in a separate worktree) with the identical command in the same container:
 
 ```
 mvn -B -ntp -pl j-lawyer-backupmgr -am -Dmaven.test.failure.ignore=true -Dmaven.compiler.release= -Dmaven.compiler.source=17 -Dmaven.compiler.target=17 clean package
@@ -28,8 +30,8 @@ mvn -B -ntp -pl j-lawyer-backupmgr -am -Dmaven.test.failure.ignore=true -Dmaven.
 
 | Module | branch total / executed / skipped / failed | master total / executed / skipped / failed |
 |---|---|---|
-| j-lawyer-backupmgr | 21 / 21 / 0 / 0 | n/a |
-| total | 21 / 21 / 0 / 0 | 0 / 0 / 0 / 0 |
+| j-lawyer-backupmgr | 27 / 27 / 0 / 0 | n/a |
+| total | 27 / 27 / 0 / 0 | 0 / 0 / 0 / 0 |
 
 Failing tests: identical to master
 
@@ -97,3 +99,27 @@ Antworten je Thread:
 - PRRT_kwDOCUQTLc6zRFbR: Abgelehnt: mysqldump schreibt die Kollation in SET collation_connection ohne Anführungszeichen. Ein Wert in Anführungszeichen bleibt bewusst unverändert, die Wiederherstellung meldet dann den Fehler 1273 des Servers, statt eine Zeichenkette umzuschreiben.
 - PRRT_kwDOCUQTLc6zRFbv: Behoben in 8932d6b1b, sicher statt nachgebildet: MariaDB 10.11.14 führt /*!50503 und /*M!100100 aus und ignoriert /*!50700 und /*!80000 (geprüft: SELECT 1 /*!50503 +10 */ /*!50700 +100 */ /*!80000 +1000 */ /*M!100100 +10000 */ ergibt 10011). Ändert eine Anweisung in einem Kommentar, den der Zielserver vielleicht ignoriert (ab 50700 oder /*M!), den sql_mode, wird nichts ersetzt. mysqldump schreibt sql_mode nur in /*!40101 und /*!50003, die alle in Frage kommenden Server ausführen. Neuer Test, er schlägt mit dem vorherigen Stand fehl.
 - PRRT_kwDOCUQTLc6zRFcO: Behoben in 8932d6b1b: Kommentare (/* */, -- und #) zwischen COLLATE und dem Namen zählen wie Leerraum, ihr Inhalt bleibt geschützt. Neuer Test dazu.
+
+## Antwort auf Codex 03.11. (Runde 2)
+
+Neuer Commit: 7088e5caa.
+
+Build (Stand 7088e5caa, gestartet 03.11.2026 19:20 UTC, Ubuntu OpenJDK 17.0.20 mit OpenJFX 17.0.9, Maven 3.9.11):
+
+```
+mvn -B -ntp -pl j-lawyer-backupmgr -am -Dmaven.test.failure.ignore=true -Dmaven.compiler.release= -Dmaven.compiler.source=17 -Dmaven.compiler.target=17 clean package
+```
+
+Ergebnis: BUILD SUCCESS. 27 Tests gesamt, 27 ausgeführt, 0 übersprungen, 0 fehlgeschlagen. Die fehlgeschlagenen Tests sind dieselben wie auf master 7b3b3dfa8 (siehe Build and tests), die neuen Tests bestehen und schlagen mit dem vorherigen Stand fehl.
+
+Punkte: Unsicherheit gilt jetzt je Anweisung, nicht nach ihrem ersten Wort. ANSI_QUOTES, nicht verstandene sql_mode-Werte (Ausdrücke, nicht gesicherte Variablen) und Zuweisungen der Kollation an Kollationsvariablen in Rümpfen von Triggern und Prozeduren machen das Ergebnis unsicher, dann wird nichts ersetzt. RestoreExecutor bricht vor dem Löschen ab, wenn beim Auspacken eine Datei nicht geschrieben werden konnte oder die Datenbanksicherung fehlt, und wenn der Server die Kollation nicht kennt, die Sicherung sie enthält und nicht sicher angepasst werden kann. Ein Fehler beim Löschen der Kopie überdeckt weder einen Fehler der Wiederherstellung noch macht er eine erfolgreiche zum Fehler. Neue Tests: 5 in SqlDumpUtilsTest (vier davon schlagen mit 8932d6b1b fehl, der fünfte prüft die neue Suche in der Datei) und RestorePreparationTest (mit 8932d6b1b wird das Datenverzeichnis gelöscht). Ende-zu-Ende mit MariaDB 10.11.14 und RestoreExecutor.restore(): eine MySQL-8-Sicherung wird mit 2 Ersetzungen eingespielt, eine Sicherung mit ANSI_QUOTES bricht mit der Meldung ab, Datenverzeichnis und vorhandene Datenbank bleiben unverändert. Hinweis: Ein erster lokaler Stand dieses Commits hatte die vorhandene, auskommentierte RestoreExecutorTest.java überschrieben. Das wurde vor dem Push korrigiert, der neue Test liegt in RestorePreparationTest.java, RestoreExecutorTest.java ist unverändert.
+
+pr.md ist angepasst (siehe die Punkte oben).
+
+Antworten je Thread:
+
+- PRRT_kwDOCUQTLc6zRFYL: Behoben in 8932d6b1b und 7088e5caa: Die Datenbanksicherung wird vor dem Leeren des Datenverzeichnisses ausgepackt und geprüft. Schlägt das Auspacken fehl, scheitert das Schreiben der angepassten Kopie, oder kennt der Server die Kollation nicht und die Sicherung enthält sie, kann aber nicht sicher angepasst werden, bricht die Wiederherstellung ab, bevor etwas gelöscht wird. Die Sicherung selbst bleibt unverändert. Die Kopie wird nach dem Einspielen gelöscht, ein Fehler beim Löschen wird gemeldet und ändert das Ergebnis der Wiederherstellung nicht.
+- PRRT_kwDOCUQTLc6zRFZF: Behoben in 8932d6b1b: Die Kopie für die Wiederherstellung wird mit den Rechten rw------- angelegt, wo das Dateisystem POSIX-Rechte kennt. Ersetzt replaceCollation eine Datei an Ort und Stelle, bekommt die neue Datei die POSIX-Rechtebits der alten, Eigentümer, Gruppe und ACLs sind die einer neu angelegten Datei. Die Wiederherstellung ersetzt die Sicherung nicht mehr.
+- PRRT_kwDOCUQTLc6zRFZl: Behoben in 8932d6b1b und 7088e5caa: Ersetzt wird nach COLLATE und in Zuweisungen an collation_connection, collation_server und collation_database, nicht nach einem Punkt (auch mit Leerzeichen dazwischen, z.B. NEW. collation_connection). Im Rumpf eines Triggers oder einer Prozedur kann eine gleichnamige lokale Variable gemeint sein. Dort wird eine solche Zuweisung nicht ersetzt, und die Wiederherstellung bricht vor dem Löschen ab.
+- PRRT_kwDOCUQTLc6zRFaL: Behoben in 7088e5caa statt abgelehnt: Setzt die Sicherung einen sql_mode mit ANSI_QUOTES (auch über ANSI oder Sammelmodi wie ORACLE), wird nichts ersetzt und die Wiederherstellung bricht vor dem Löschen mit einer Meldung ab. Doppelte Anführungszeichen als Bezeichner werden nicht nachgebildet.
+- PRRT_kwDOCUQTLc6zRFbv: Behoben in 8932d6b1b und 7088e5caa, sicher statt nachgebildet: Ändert eine Anweisung den sql_mode und enthält sie irgendwo einen ausführbaren Kommentar, den der Zielserver vielleicht ignoriert (ab /*!50700 oder /*M!), wird nichts ersetzt und die Wiederherstellung bricht vor dem Löschen ab. Das gilt auch, wenn nur die Zuweisung im Kommentar steht. MariaDB 10.11.14 ignoriert /*!50700 und /*!80000 (geprüft mit SELECT).
