@@ -76,3 +76,25 @@ JDK wie bei #2151 beschrieben (Ubuntu OpenJDK 17 plus OpenJFX 17.0.9 per jlink, 
 - Die Rückfrage "Daten vor dem Verlassen speichern?" erscheint auch, wenn seit dem Speichern nichts geändert wurde, weil `NewAddressPanel.isDirty()` nur auf nicht leere Felder prüft. Alternative wäre, ohne Rückfrage zurückzusetzen. Dann gingen aber Änderungen nach dem Etiketten-Speichern still verloren. Ich habe mich für die Rückfrage entschieden (gleiches Verhalten wie beim Modulwechsel).
 - Schließen des Dialogs (X) bricht hier ab, beim normalen Modulwechsel gilt X dagegen wie Nein. Bewusst vorsichtiger gewählt.
 - `NewArchiveFilePanel` hat vermutlich dasselbe Problem (`ArchiveFilePanel.confirmSave` zeigt die neu angelegte Akte im NewArchiveFilePanel). Nicht geändert, eigener Folge-PR möglich.
+
+## Antwort auf Copilot-Review 03.11.
+
+Neuer Commit: `bb431f313` (Autor derspotter, Co-Authored-By Claude), normal gepusht auf `fix/1283-new-contact-after-tag-save`.
+
+Build: `mvn -B -ntp -pl j-lawyer-client -am -Dmaven.test.failure.ignore=true -Dmaven.compiler.release= -Dmaven.compiler.source=17 -Dmaven.compiler.target=17 clean package`
+JDK: Ubuntu OpenJDK 17.0.20 plus OpenJFX 17.0.9 aus Maven Central per jlink (BellSoft-Hosts im Cloud-Proxy gesperrt), deshalb `--release` durch source/target 17 ersetzt.
+Ergebnis: Build läuft durch, weil Testfehler ignoriert werden. Ausgeführt 278, fehlgeschlagen 17 (FtpTest 6, SftpTest 6, SmbTest 5, wie auf master), Fehler 0, übersprungen 0. Client 91 ausgeführt, 0 fehlgeschlagen (neu: AddressPanelClearInputsTest mit 2 Tests, EditorsRegistryReselectTest weiter 8). `git merge-tree` gegen master 3a7f47e40: Exit 0.
+
+Tests: Die beiden Reset-Fixes liegen in `AddressPanel.clearInputs()`. `EditorsRegistryReselectTest` arbeitet mit Test-Editoren und kann `AddressPanel` nicht abdecken, die Klasse lässt sich ohne Server nicht instanziieren. Deshalb ein eigener Test am Quelltext (`AddressPanelClearInputsTest`, Technik wie `GroupLayoutCompletenessTest`): alle in `fillDTO()` gelesenen Felder müssen in `clearInputs()` zurückgesetzt werden (die Gender-Radiobuttons über rdGenderUndefined in derselben ButtonGroup), und `clearInputs()` muss nach `this.dto = null` die Dokumente neu laden. Vor dem Fix hätte der erste Test genau txtSepaReference, txtSepaSince und txtLeitwegId gemeldet (vorab per Vergleich der beiden Methoden ermittelt).
+
+Der Entwurf `wip/1283-reset-local` (4e509a8ea) enthält dieselben fünf Zeilen in AddressPanel.java. Ich habe ihn nicht übernommen, sondern die eigene, gleichlautende Umsetzung gebaut und getestet. Auf den wip-Branch nicht gepusht.
+
+pr.md angepasst: neuer Punkt unter Fix zu clearInputs(), neuer Test unter Verifiziert, Testzahlen aktualisiert.
+
+Antworten je Thread:
+- PRRT_kwDOCUQTLc6zRD_W: Behoben in bb431f3: clearInputs() lädt die Dokumente nach dem Leeren der Adresse neu. Ohne Adresse leert das die Tabelle und die zwischengespeicherten Dokumente (currentDocuments), die Löschen-Aktion findet danach keine Dokumente der vorherigen Adresse mehr.
+- PRRT_kwDOCUQTLc6zRD_8: Behoben in bb431f3: clearInputs() leert jetzt auch SEPA-Mandatsreferenz, SEPA-Datum und Leitweg-ID. Der neue AddressPanelClearInputsTest prüft am Quelltext, dass jedes von fillDTO() gespeicherte Feld in clearInputs() zurückgesetzt wird. Weitere Lücken gab es nicht.
+- PRRT_kwDOCUQTLc6zRD-Z: Nicht in diesem PR: AddressPanel.save() baut schon vor diesem PR bei jeder Änderung eines bestehenden Kontakts (auch in der Bearbeiten-Ansicht) ein neues AddressBean ohne creator und creationDate, und AddressService.updateAddress() übernimmt aus dem gespeicherten Kontakt nur defaultRole. Das betrifft jedes Speichern einer Adresse und gehört in einen eigenen PR.
+
+Prüfung zu PRRT_kwDOCUQTLc6zRD-Z: `AddressService.updateAddress()` liest den gespeicherten Kontakt, übernimmt nur `defaultRole`, setzt lastModifier und modificationDate und ruft `addressFacade.edit(dto)`. `AddressBean.creator` und `creationDate` sind normale `@Column`-Felder (nicht updatable=false), `fillDTO()` setzt sie nicht. Der Code in `save()` und `updateAddress()` stammt laut git blame aus deutlich älteren Commits (jenseits der 2000 Commits im Klon), ist also nicht durch diesen PR entstanden.
+
