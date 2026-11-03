@@ -2,6 +2,7 @@
 
 - Branch: `fix/3507-pdf-teile-ohne-verweise-auf-original` (fork derspotter/j-lawyer-org), base upstream/master 7b3b3dfa8
 - Commits (newest first):
+  - 89a7dde52 derspotter <jayjag@posteo.de> | fix(documents): PDF aufteilen bestimmt behaltene Formularfelder aus den Widgets der behaltenen Seiten und durchläuft Feldbäume ohne Rekursion, auch bei Zyklen und sehr tiefen Formularen. Refs #3507
   - fb22fb03f derspotter <jayjag@posteo.de> | fix(documents): PDF aufteilen schreibt keine Formularfelder anderer Seiten mehr in den Teil, auch wenn sie über ein gemeinsames übergeordnetes Feld erreichbar sind. Refs #3507
   - 08a6997f4 derspotter <jayjag@posteo.de> | fix(documents): PDF aufteilen prüft alle gespeicherten Objekte des Teils, Verweise auf behaltene Seiten zeigen auf deren Kopie, Seitenaktionen und Artikel ziehen keine anderen Seiten mehr mit. Refs #3507
   - 4a23eb664 derspotter <jayjag@posteo.de> | fix(documents): PDF aufteilen entfernt auch Verweise über Formularfelder, Folgeaktionen, Antworten und Popups, doppelte Seitenzahlen ergeben keinen leeren Teil. Refs #3507
@@ -12,13 +13,13 @@
 | File | + | - |
 |---|---|---|
 | `j-lawyer-client/src/main/java/com/jdimension/jlawyer/client/editors/files/ArchiveFilePanel.java` | 11 | 18 |
-| `j-lawyer-client/src/main/java/com/jdimension/jlawyer/client/utils/pdf/PdfSplitUtils.java` | 991 | 0 |
-| `j-lawyer-client/src/test/java/org/jlawyer/test/client/utils/PdfSplitUtilsTest.java` | 1131 | 0 |
-| total | 2133 | 18 |
+| `j-lawyer-client/src/main/java/com/jdimension/jlawyer/client/utils/pdf/PdfSplitUtils.java` | 994 | 0 |
+| `j-lawyer-client/src/test/java/org/jlawyer/test/client/utils/PdfSplitUtilsTest.java` | 1189 | 0 |
+| total | 2194 | 18 |
 
 ## Build and tests
 
-JDK: Ubuntu OpenJDK 17.0.20 + OpenJFX 17.0.9 from Maven Central, combined with jlink. Maven 3.9.11. Branch at commit fb22fb03f built (started 03.11.2026 18:34 UTC) and master 7b3b3dfa8 built (02.11.2026, in a separate worktree) with the identical command in the same container:
+JDK: Ubuntu OpenJDK 17.0.20 + OpenJFX 17.0.9 from Maven Central, combined with jlink. Maven 3.9.11. Branch at commit 89a7dde52 built (started 03.11.2026 19:14 UTC) and master 7b3b3dfa8 built (02.11.2026, in a separate worktree) with the identical command in the same container:
 
 ```
 mvn -B -ntp -pl j-lawyer-client -am -Dmaven.test.failure.ignore=true -Dmaven.compiler.release= -Dmaven.compiler.source=17 -Dmaven.compiler.target=17 clean package
@@ -26,12 +27,12 @@ mvn -B -ntp -pl j-lawyer-client -am -Dmaven.test.failure.ignore=true -Dmaven.com
 
 | Module | branch total / executed / skipped / failed | master total / executed / skipped / failed |
 |---|---|---|
-| j-lawyer-client | 93 / 93 / 0 / 0 | 81 / 81 / 0 / 0 |
+| j-lawyer-client | 95 / 95 / 0 / 0 | 81 / 81 / 0 / 0 |
 | j-lawyer-cloud | 4 / 4 / 0 / 0 | 4 / 4 / 0 / 0 |
 | j-lawyer-fax | 23 / 23 / 0 / 0 | 23 / 23 / 0 / 0 |
 | j-lawyer-server-common | 104 / 104 / 0 / 17 | 104 / 104 / 0 / 17 |
 | j-lawyer-server-entities | 56 / 56 / 0 / 0 | 56 / 56 / 0 / 0 |
-| total | 280 / 280 / 0 / 17 | 268 / 268 / 0 / 17 |
+| total | 282 / 282 / 0 / 17 | 268 / 268 / 0 / 17 |
 
 Failing tests: identical to master
 
@@ -88,3 +89,23 @@ Der Commit fb22fb03f übernimmt den ungetesteten Entwurf 45f0935fb der lokalen L
 Antworten je Thread:
 
 - PRRT_kwDOCUQTLc6zRA4O: Behoben in fb22fb03f: Formularfelder ohne Widget auf einer Seite des Teils werden samt /V und /DV entfernt, auch wenn ein behaltenes Widget sie über /Parent und /Kids erreicht. Behalten wird ein Feld, wenn es selbst oder ein Nachfahre ein Widget auf einer behaltenen Seite ist. Neuer Test mit drei Nachbarfeldern mit unterschiedlichen Werten, er prüft Datenströme und Zeichenketten in allen Objekten und schlägt mit dem vorherigen Stand fehl.
+
+## Antwort auf Codex 03.11. (Runde 2)
+
+Neuer Commit: 89a7dde52.
+
+Build (Stand 89a7dde52, gestartet 03.11.2026 19:14 UTC, Ubuntu OpenJDK 17.0.20 mit OpenJFX 17.0.9, Maven 3.9.11):
+
+```
+mvn -B -ntp -pl j-lawyer-client -am -Dmaven.test.failure.ignore=true -Dmaven.compiler.release= -Dmaven.compiler.source=17 -Dmaven.compiler.target=17 clean package
+```
+
+Ergebnis: BUILD SUCCESS. 282 Tests gesamt, 282 ausgeführt, 0 übersprungen, 17 fehlgeschlagen. Die fehlgeschlagenen Tests sind dieselben wie auf master 7b3b3dfa8 (siehe Build and tests), die neuen Tests bestehen und schlagen mit dem vorherigen Stand fehl.
+
+Punkte: Behaltene Felder werden jetzt aus den Widgets der behaltenen Seiten und deren /Parent-Kette bestimmt, nicht mehr aus einem rekursiven Durchlauf. Ein Zyklus in /Kids hält damit kein Feld mehr fest, und die Durchläufe sind iterativ. testCyclicFieldHierarchy schlägt mit fb22fb03f fehl (Wert von Seite 5 im Teil), testDeepFieldHierarchy mit StackOverflowError. pr.md nennt die richtigen Zahlen: Mit 4a23eb664 schlagen 7 der 14 Tests fehl, mit 08a6997f4 die beiden Tests mit Formularwerten anderer Seiten, und der Bereichstest enthält die Nachbarfelder nicht.
+
+pr.md ist angepasst (siehe die Punkte oben).
+
+Antworten je Thread:
+
+- PRRT_kwDOCUQTLc6zRA4O: Behoben in fb22fb03f und 89a7dde52: Formularfelder ohne Widget auf einer Seite des Teils werden samt /V und /DV entfernt, auch wenn ein behaltenes Widget sie über /Parent und /Kids erreicht. Behalten werden nur die Widgets der behaltenen Seiten und ihre Felder entlang /Parent. Die Feldbäume werden ohne Rekursion durchlaufen, so werden auch fehlerhafte Formulare mit Zyklen und sehr tiefe Feldbäume verarbeitet. Tests mit Nachbarfeldern mit unterschiedlichen Werten, mit einem Zyklus und mit 20000 Ebenen prüfen Datenströme und Zeichenketten aller Objekte.
