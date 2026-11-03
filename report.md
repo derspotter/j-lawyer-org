@@ -2,6 +2,7 @@
 
 - Branch: `fix/2460-ablegen-als-datei-ersetzen` (fork derspotter/j-lawyer-org), base upstream/master 7b3b3dfa8
 - Commits (newest first):
+  - 07ec481fe derspotter <jayjag@posteo.de> | fix(documents): Name der ersetzten Datei höchstens 200 Zeichen, damit der Server die Umbenennung in der Historie der Akte speichern kann, und die Dokumentliste wird auch nach einem gescheiterten Verschieben in den Ordner abgeglichen. Refs #2460
   - d5ceca160 derspotter <jayjag@posteo.de> | fix(documents): nach dem Ersetzen wird die Dokumentliste der Akte neu geladen, Etiketten behalten ihr Datum, eine behobene Warnung zu Etiketten entfällt, der Papierkorb wird nur bei Bedarf geladen. Refs #2460
   - 757a6ab74 derspotter <jayjag@posteo.de> | fix(documents): Ersetzen bei „ablegen als“ stellt die Etiketten der bisherigen Datei nach jedem Umbenennen wieder her, eindeutige Zwischennamen auch bei mehreren Ersetzungen in derselben Millisekunde. Refs #2460
   - 7fd94c432 derspotter <jayjag@posteo.de> | fix(documents): Ersetzen bei „ablegen als“ löscht bei Fehlern nichts mehr, die bisherige Datei wird erst nach dem Ersetzen umbenannt in den Papierkorb gelegt, und der tatsächliche Stand aller Dateien wird angezeigt. Refs #2460
@@ -13,14 +14,14 @@
 
 | File | + | - |
 |---|---|---|
-| `j-lawyer-client/src/main/java/com/jdimension/jlawyer/client/editors/files/ArchiveFilePanel.java` | 77 | 2 |
-| `j-lawyer-client/src/main/java/com/jdimension/jlawyer/client/editors/files/DocumentReplacement.java` | 1070 | 0 |
-| `j-lawyer-client/src/test/java/com/jdimension/jlawyer/client/editors/files/DocumentReplacementTest.java` | 1281 | 0 |
-| total | 2428 | 2 |
+| `j-lawyer-client/src/main/java/com/jdimension/jlawyer/client/editors/files/ArchiveFilePanel.java` | 85 | 4 |
+| `j-lawyer-client/src/main/java/com/jdimension/jlawyer/client/editors/files/DocumentReplacement.java` | 1073 | 0 |
+| `j-lawyer-client/src/test/java/com/jdimension/jlawyer/client/editors/files/DocumentReplacementTest.java` | 1286 | 0 |
+| total | 2444 | 4 |
 
 ## Build and tests
 
-JDK: Ubuntu OpenJDK 17.0.20 + OpenJFX 17.0.9 from Maven Central, combined with jlink. Maven 3.9.11. Branch at commit d5ceca160 built (started 03.11.2026 18:38 UTC) and master 7b3b3dfa8 built (02.11.2026, in a separate worktree) with the identical command in the same container:
+JDK: Ubuntu OpenJDK 17.0.20 + OpenJFX 17.0.9 from Maven Central, combined with jlink. Maven 3.9.11. Branch at commit 07ec481fe built (started 03.11.2026 19:10 UTC) and master 7b3b3dfa8 built (02.11.2026, in a separate worktree) with the identical command in the same container:
 
 ```
 mvn -B -ntp -pl j-lawyer-client -am -Dmaven.test.failure.ignore=true -Dmaven.compiler.release= -Dmaven.compiler.source=17 -Dmaven.compiler.target=17 clean package
@@ -114,3 +115,27 @@ Antworten je Thread:
 - PRRT_kwDOCUQTLc6zRDZh: Behoben in d5ceca160: Die Sicherung der Etiketten enthält das Datum. Ein Etikett mit geändertem Wert oder Datum wird entfernt und mit dem gesicherten Wert und Datum neu angelegt, denn der Server übernimmt ein mitgegebenes Datum nur beim Anlegen. Der Test prüft die Daten, mit dem vorherigen Stand schlägt er fehl.
 - PRRT_kwDOCUQTLc6zRDaF: Behoben in d5ceca160: Warnungen zu Etiketten werden je Dokument geführt und entfallen, wenn ein späterer Versuch gelingt. Neuer Test mit einem einmaligen Fehler beim ersten Wiederherstellen.
 - PRRT_kwDOCUQTLc6zRDas: Behoben in d5ceca160: Hat ein Dokument der Akte den Namen schon, wird der Papierkorb nicht geladen, denn Namen sind in Akte und Papierkorb zusammen eindeutig. Eine Abfrage nur für den Papierkorb einer Akte bietet das Remote-Interface nicht, eine neue Methode wird bewusst nicht ergänzt.
+
+## Antwort auf Codex 03.11. (Runde 2)
+
+Neuer Commit: 07ec481fe.
+
+Build (Stand 07ec481fe, gestartet 03.11.2026 19:10 UTC, Ubuntu OpenJDK 17.0.20 mit OpenJFX 17.0.9, Maven 3.9.11):
+
+```
+mvn -B -ntp -pl j-lawyer-client -am -Dmaven.test.failure.ignore=true -Dmaven.compiler.release= -Dmaven.compiler.source=17 -Dmaven.compiler.target=17 clean package
+```
+
+Ergebnis: BUILD SUCCESS. 287 Tests gesamt, 287 ausgeführt, 0 übersprungen, 17 fehlgeschlagen. Die fehlgeschlagenen Tests sind dieselben wie auf master 7b3b3dfa8 (siehe Build and tests), die neuen Tests bestehen und schlagen mit dem vorherigen Stand fehl.
+
+Punkte: Ein Fehler beim Verschieben in den Ordner der Ausgangsdatei wird jetzt als Warnung gemeldet, danach wird die Liste wie bei Erfolg abgeglichen. Für den Menüpunkt gibt es keinen automatischen Test (Swing-Handler mit Serveraufrufen), ArchiveFilePanel wurde mit dem Klassenpfad des Client-Builds kompiliert.
+
+Gegen einen echten Server ausprobiert (WildFly 26.1.3 mit docker/wildfly/standalone.xml, MariaDB 10.11.14 mit docker/mariadb/create_database.sql und den Flyway-Migrationen bis 3.6.0.9, EAR aus diesem Branch): Ein Programm ruft DocumentReplacement über die EJB-Schnittstelle des Clients auf, mit drei Etikettenregeln wie im Unit-Test. Geprüft: Ersetzen in der Akte (neuer Inhalt, nur die Etiketten für Brief.pdf, die bisherige Datei mit Inhalt, Etiketten und deren Datum als Ersetzt_..._Brief.pdf im Papierkorb, keine vorläufige Datei übrig), Ersetzen aus dem Papierkorb, abweichende Groß- und Kleinschreibung, eine von einem anderen Client umbenannte Datei, Ablegen ohne Ersetzen bei vorhandenem Namen, ein Name mit 250 Zeichen und eine vom Benutzer user gesperrte Datei (Meldung „Gesperrt.odt ist gesperrt für Nutzer user“, die bisherige Datei mit Namen und Etiketten unverändert, die neue unter dem vorläufigen Namen, beide in der Meldung genannt). Mit 07ec481fe bestehen alle 22 Prüfungen.
+
+Dabei gefunden und in 07ec481fe behoben: Mit d5ceca160 scheiterte das Ersetzen eines Namens mit 250 Zeichen sicher, aber unnötig. Der Server schreibt beim Umbenennen „Dokument umbenannt: alt (neuer Name: neu)“ in case_history.changeDescription (500 Zeichen), der Name Ersetzt_... hatte bis zu 250 Zeichen. Er ist jetzt auf 200 Zeichen begrenzt. Der nachgebildete Server im Unit-Test prüft diese Länge jetzt auch, testLongestPossibleName schlägt mit d5ceca160 fehl. Unabhängig davon scheitert auf master jedes Umbenennen, bei dem alter und neuer Name zusammen mehr als 465 Zeichen haben. Das liegt am Server und ist nicht Teil dieses PRs.
+
+pr.md ist angepasst (siehe die Punkte oben).
+
+Antworten je Thread:
+
+- PRRT_kwDOCUQTLc6zRDYk: Behoben in d5ceca160 und 07ec481fe: Nach dem Ersetzen und nach einem Fehler wird die Dokumentliste der Akte samt Etiketten vom Server neu geladen, auch wenn das anschließende Verschieben der neuen Datei in den Ordner der Ausgangsdatei scheitert (dann mit einer Warnung). Umbenennungen durch andere Clients erscheinen mit dem aktuellen Namen. Gelingt das Laden der Liste nicht, werden nur die beteiligten Dokumente angepasst, ein von einem anderen Client umbenanntes Dokument erscheint dann bis zum nächsten Laden der Akte noch unter seinem alten Namen.
