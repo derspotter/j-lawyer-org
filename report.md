@@ -2,6 +2,7 @@
 
 - Branch: `fix/2460-ablegen-als-datei-ersetzen` (fork derspotter/j-lawyer-org), base upstream/master 7b3b3dfa8
 - Commits (newest first):
+  - 5a13f3300 derspotter <jayjag@posteo.de> | fix(documents): Umbenennen benennt die Datei eines noch unter seinem Namen gespeicherten Dokuments vorher wie beim Lesen in seine ID um, sonst ist der Inhalt danach nicht mehr zu finden. Der Suchindex nimmt bei einer Aktualisierung nur noch vorhandene Dokumente außerhalb des Papierkorbs auf, wie schon bei Metadaten. Refs #2460
   - c47d1e66b derspotter <jayjag@posteo.de> | fix(documents): Ersetzen löscht nichts mehr endgültig. Eine Datei im Papierkorb mit dem Namen wird wie eine in der Akte in Ersetzt_ umbenannt und bleibt im Papierkorb, bis dessen Aufbewahrungsfrist sie entfernt. Bei einem Fehler bekommt sie ihren Namen zurück, wurde sie inzwischen wiederhergestellt, bleibt sie umbenannt in der Akte und die Meldung nennt das. Refs #2460
   - f84405b16 derspotter <jayjag@posteo.de> | Revert "fix(documents): Endgültiges Löschen aus dem Papierkorb liest das Dokument im Server erneut und gesperrt"
   - 066677331 derspotter <jayjag@posteo.de> | fix(documents): Endgültiges Löschen aus dem Papierkorb liest das Dokument im Server erneut und gesperrt und löscht es nur, wenn es noch im Papierkorb liegt. Ein gerade von jemand anderem wiederhergestelltes Dokument wird nicht gelöscht, das Ersetzen meldet dann einen Fehler und stellt den vorherigen Zustand her, die automatische Bereinigung des Papierkorbs überspringt es. Refs #2460
@@ -20,14 +21,17 @@
 | `j-lawyer-client/src/main/java/com/jdimension/jlawyer/client/editors/files/ArchiveFilePanel.java` | 85 | 4 |
 | `j-lawyer-client/src/main/java/com/jdimension/jlawyer/client/editors/files/DocumentReplacement.java` | 1080 | 0 |
 | `j-lawyer-client/src/test/java/com/jdimension/jlawyer/client/editors/files/DocumentReplacementTest.java` | 1303 | 0 |
-| total | 2468 | 4 |
+| `j-lawyer-server/j-lawyer-server-ejb/src/main/java/com/jdimension/jlawyer/services/ArchiveFileService.java` | 5 | 0 |
+| `j-lawyer-server/j-lawyer-server-ejb/src/main/java/org/jlawyer/async/SearchIndexProcessor.java` | 4 | 1 |
+| `j-lawyer-server/j-lawyer-server-ejb/src/test/java/com/jdimension/jlawyer/services/RenameDocumentTest.java` | 794 | 0 |
+| total | 3271 | 5 |
 
 ## Build and tests
 
-JDK: Ubuntu OpenJDK 17.0.20 + OpenJFX 17.0.9 from Maven Central, combined with jlink. Maven 3.9.11. Branch at commit c47d1e66b built (started 03.11.2026 23:26 UTC) and master 7b3b3dfa8 built (02.11.2026, in a separate worktree) with the identical command in the same container:
+JDK: Ubuntu OpenJDK 17.0.20 + OpenJFX 17.0.9 from Maven Central, combined with jlink. Maven 3.9.11. Branch at commit 5a13f3300 built (started 03.11.2026 23:59 UTC) and master 7b3b3dfa8 built (02.11.2026, in a separate worktree) with the identical command in the same container:
 
 ```
-mvn -B -ntp -pl j-lawyer-client -am -Dmaven.test.failure.ignore=true -Dmaven.compiler.release= -Dmaven.compiler.source=17 -Dmaven.compiler.target=17 clean package
+mvn -B -ntp -pl j-lawyer-client,j-lawyer-server/j-lawyer-server-ejb -am -Dmaven.test.failure.ignore=true -Dmaven.compiler.release= -Dmaven.compiler.source=17 -Dmaven.compiler.target=17 clean package
 ```
 
 | Module | branch total / executed / skipped / failed | master total / executed / skipped / failed |
@@ -37,7 +41,8 @@ mvn -B -ntp -pl j-lawyer-client -am -Dmaven.test.failure.ignore=true -Dmaven.com
 | j-lawyer-fax | 23 / 23 / 0 / 0 | 23 / 23 / 0 / 0 |
 | j-lawyer-server-common | 104 / 104 / 0 / 17 | 104 / 104 / 0 / 17 |
 | j-lawyer-server-entities | 56 / 56 / 0 / 0 | 56 / 56 / 0 / 0 |
-| total | 288 / 288 / 0 / 17 | 268 / 268 / 0 / 17 |
+| j-lawyer-server/j-lawyer-server-ejb | 830 / 814 / 16 / 1 | 829 / 813 / 16 / 1 |
+| total | 1118 / 1102 / 16 / 18 | 1097 / 1081 / 16 / 18 |
 
 Failing tests: identical to master
 
@@ -58,6 +63,7 @@ Failing tests: identical to master
 - j-lawyer-server-common SmbTest#testDelete
 - j-lawyer-server-common SmbTest#testIsFile
 - j-lawyer-server-common SmbTest#testTraverse
+- j-lawyer-server/j-lawyer-server-ejb LibreOfficeODFTest#setReplaceEmptyLine
 
 ## Antwort auf Review 02.11.
 1. [P1] Original deleted before the upload: agreed, fixed in a3d57f3ca. `DocumentReplacement.addReplacing()` stores the new document under a temporary name, then removes the existing one, then renames (`renameDocument()`, which checks name conflicts). Test: a failing upload leaves `removeDocument` / `removeDocumentFromBin` uncalled. If only the final rename fails, the new document stays under its temporary name (stated in the PR).
@@ -196,3 +202,28 @@ pr.md ist angepasst: Fix sagt jetzt, dass das Ersetzen nichts endgültig löscht
 Antwort für den Thread:
 
 - PRRT_kwDOCUQTLc6zSLXZ: Behoben in c47d1e66b, anders als zuerst gedacht: Das Ersetzen löscht nichts mehr endgültig, removeDocumentFromBin wird dabei nicht mehr aufgerufen. Liegt die Datei mit dem Namen im Papierkorb, wird sie wie eine Datei in der Akte in Ersetzt_ umbenannt (höchstens 200 Zeichen, Etiketten wie vorher) und bleibt im Papierkorb, bis die Aufbewahrungsfrist sie entfernt. Stellt ein anderer Client sie zwischen getDocument() und dem Umbenennen wieder her, bleibt sie umbenannt in der Akte, nichts geht verloren, und die Meldung sowie die neu geladene Dokumentliste zeigen sie dort. Scheitert ein späterer Schritt, bekommt sie Namen und Etiketten zurück. Die Serveränderung aus 066677331 ist mit f84405b16 zurückgenommen.
+
+## Antwort auf Copilot Runde 4 04.11.
+
+Neuer Commit: 5a13f3300 (auf c47d1e66b).
+
+1. Suchindex: SearchIndexProcessor ruft bei ACTION_UPDATE updateInIndex nur noch auf, wenn das Dokument existiert und nicht im Papierkorb liegt (md != null && !md.isDeleted()), genau wie im Zweig für ACTION_UPDATE_METADATA. Das deckt das Umbenennen im Papierkorb, das Zurückbenennen und verspätete Anfragen ab. ACTION_ADD ist unverändert: es wird nur beim Hinzufügen und beim Wiederherstellen geschickt, also für aktive Dokumente, und ein späteres Löschen schickt danach ACTION_DELETE. Kein removeDocument nach dem Umbenennen. In pr.md steht unter Nicht abgedeckt nur noch, dass schon vorhandene Indexeinträge für Dokumente im Papierkorb nicht bereinigt werden.
+2. Alte Dateien: ArchiveFileService.renameDocument ruft vor dem Ändern des Namens this.migrateDocument(dst, id, db.getName()) auf, dst ist das Verzeichnis archivefiles der Akte, gebildet wie in getDocumentContentImpl. Keine neue Remote-Methode. Das behebt die Lücke auch für aktive Dokumente, steht so in pr.md. Neuer Test RenameDocumentTest (j-lawyer-server-ejb): ArchiveFileService mit nachgebildeten Fassaden, einer nachgebildeten JNDI-Datenquelle für den Historieneintrag und einer echten Datei unter dem Namen des Dokuments. Nach renameDocument liefert getDocumentContent den Inhalt. Mit c47d1e66b schlägt er fehl ("Dokument Ersetzt_1_Brief.pdf existiert nicht!").
+3. Unter Nicht abgedeckt ergänzt, ohne Code: ein gleichzeitiges Wiederherstellen durch einen anderen Client im selben Moment wie das Umbenennen (die Zeile wird ohne Versionsprüfung zurückgeschrieben, die Datei kann wieder im Papierkorb liegen und dort bis zum Ablauf der Frist wiederhergestellt werden, so verhalten sich alle schreibenden Methoden des Dienstes) und ein ausgeführtes Umbenennen mit verlorener Antwort (die Datei behält den Namen Ersetzt_ und die zurückgesetzten Etiketten, es geht nichts verloren).
+4. Formulierung: pr.md sagt beim Fehlerfall jetzt, dass die neue Datei normalerweise ihren vorläufigen Namen behält, bei einem ausgeführten Umbenennen mit verlorener Antwort aber schon den endgültigen Namen trägt. Dass Name und Etiketten der bisherigen Datei zurückgegeben werden, stand schon als Versuch da ("wird versucht", Fehler werden gemeldet), die Antwortzeile unten sagt es jetzt ebenso.
+
+Build (Stand 5a13f3300, gestartet 03.11.2026 23:59 UTC, Ubuntu OpenJDK 17.0.20 mit OpenJFX 17.0.9, Maven 3.9.11), mit Client und Servermodul. Ein erster Lauf um 23:43 UTC hatte dasselbe Ergebnis, danach hat das Bauen des EAR für den Live-Test die Testberichte der Servermodule gelöscht, deshalb wurde der Build für diese Notizen wiederholt:
+
+```
+mvn -B -ntp -pl j-lawyer-client,j-lawyer-server/j-lawyer-server-ejb -am -Dmaven.test.failure.ignore=true -Dmaven.compiler.release= -Dmaven.compiler.source=17 -Dmaven.compiler.target=17 clean package
+```
+
+Ergebnis: BUILD SUCCESS. 1118 Tests, 18 fehlgeschlagen, 16 übersprungen. Die 18 fehlgeschlagenen sind genau dieselben wie auf master 7b3b3dfa8 mit demselben Befehl (FtpTest, SftpTest und SmbTest ohne Server, LibreOfficeODFTest#setReplaceEmptyLine). RenameDocumentTest 1 von 1, DocumentReplacementTest 20 von 20.
+
+Live: WildFly 26.1.3 und MariaDB 10.11, EAR aus 5a13f3300 gebaut und neu eingespielt, Client aus 5a13f3300. Neues Szenario J: Eine Datei wird in den Papierkorb verschoben, im Datenverzeichnis von ihrer ID auf ihren Namen umbenannt (wie in alten Installationen) und dann ersetzt. Mit dem bisherigen EAR scheitert J ("Dokument Ersetzt_1793750198159_Altbestand.pdf existiert nicht!", 37 von 39 Prüfungen), mit dem neuen EAR ist der Inhalt über die ID lesbar und die Datei liegt unter der ID, 39 von 39 Prüfungen bestehen (A bis I wie zuvor). Die Suche im Index lässt sich in dieser Installation weiterhin nicht prüfen.
+
+pr.md ist angepasst: Fix hat zwei neue Punkte zum Server (migrateDocument beim Umbenennen, auch für aktive Dokumente, und die Prüfung im Suchindex), der Punkt zum Fehlerfall nennt den Fall mit verlorener Antwort. Verifiziert nennt RenameDocumentTest und den Live-Test mit 39 Prüfungen und dem Fehlschlag ohne die Änderung. Nicht abgedeckt: Der Punkt zum Suchindex sagt nur noch, dass vorhandene Einträge nicht bereinigt werden, neu sind die beiden Punkte zum gleichzeitigen Wiederherstellen und zur verlorenen Antwort. Der Build-Abschnitt gilt für j-lawyer-client und j-lawyer-server-ejb.
+
+Endgültige Antwort für den Thread:
+
+- PRRT_kwDOCUQTLc6zSLXZ: Behoben in c47d1e66b und 5a13f3300, anders als zuerst gedacht: Das Ersetzen löscht nichts mehr endgültig, removeDocumentFromBin wird dabei nicht mehr aufgerufen. Liegt die Datei mit dem Namen im Papierkorb, wird sie wie eine Datei in der Akte in Ersetzt_ umbenannt (höchstens 200 Zeichen) und bleibt im Papierkorb, bis die Aufbewahrungsfrist sie entfernt. Stellt ein anderer Client sie zwischen getDocument() und dem Umbenennen wieder her, bleibt sie umbenannt in der Akte, nichts geht verloren, und die Meldung sowie die neu geladene Dokumentliste zeigen sie dort. Scheitert ein späterer Schritt, wird versucht, ihr Namen und Etiketten zurückzugeben, ein Fehler dabei wird gemeldet. Im Server nimmt der Suchindex umbenannte Dateien im Papierkorb nicht mehr auf, und renameDocument verschiebt den Inhalt einer noch unter ihrem Namen gespeicherten Datei vorher auf ihre ID, damit er auffindbar bleibt. Die Serveränderung aus 066677331 ist mit f84405b16 zurückgenommen.
