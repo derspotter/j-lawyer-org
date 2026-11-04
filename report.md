@@ -1,7 +1,7 @@
 # Report #2151: Etiketten-Einstellungen ohne Berechtigung
 
 - Branch: `fix/2151-tag-settings-permission-message` (Basis: upstream/master 7b3b3dfa8)
-- Commit (Head): `e88695da1` (nach dem Autor-Umschreiben durch den Orchestrator, 02.11.)
+- Commit (Head): `e7e0331a8` (Umzug nach ServerErrorUtils auf Wunsch von Jens, 04.11.)
 - Status: fertig. Autor ist jetzt derspotter (vom Orchestrator umgeschrieben, 02.11.). Die Commit-Nachricht braucht keine Korrektur.
 
 ## Nachtrag 01.11.2026 (Codex-Review, Autor)
@@ -55,3 +55,19 @@ JDK: Ubuntu OpenJDK 17.0.20 plus OpenJFX 17.0.9 (Maven Central) per jlink zu ein
 ## Offene Fragen
 - Soll der Dialog die Rollen vorab prüfen (`createOptionGroupRole`, `deleteOptionGroupRole`) und Aktionen sperren? Das würde auch den halben Umbenennen-Fall vermeiden (alter Eintrag gelöscht, neuer nicht angelegt, wenn nur die Anlege-Rolle fehlt). Bewusst nicht gemacht: der Rollen-Cache im Client kann veraltet sein, und es wäre mehr Verhaltensänderung.
 - `MultiValueTagConfigurationDialog` (Listenetiketten) hat dasselbe Muster (`ex.getMessage()`). Kandidat für einen Folge-PR mit derselben Hilfsmethode.
+
+## Umzug nach ServerErrorUtils (Wunsch von Jens, PR-Kommentar 03.11.)
+
+Neuer Commit: `e7e0331a8` (Autor derspotter, Co-Authored-By Claude), normaler Push auf `fix/2151-tag-settings-permission-message`, kein Rebase, kein Force-Push.
+
+- Neue Klasse `com.jdimension.jlawyer.client.utils.ServerErrorUtils` mit `isPermissionDenied(Throwable)` und `getServerErrorMessage(Throwable)`, Code und JavaDoc unverändert aus `UserUtils` übernommen.
+- `UserUtils.java` ist wieder identisch mit master (05f6b4350) und erscheint damit nicht mehr im Diff des PR.
+- Aufrufer umgestellt: `OptionGroupConfigurationDialog`, `OptionGroupCaseTagRename`, `OptionGroupCaseDocumentTagRename`, `OptionGroupAddressTagRename` (nur Import und Klassenname).
+- Test umbenannt: `UserUtilsTest` heißt jetzt `ServerErrorUtilsTest` (git erkennt die Umbenennung), Inhalt bis auf den Klassennamen gleich, weiter 5 Tests.
+- `msg.permissionrequired` bleibt unverändert in `JKanzleiGUI.properties` und `JKanzleiGUI_en.properties`.
+- pr.md: an den drei Stellen `UserUtils` durch `ServerErrorUtils` ersetzt (die beiden Methoden-Punkte und der Test-Punkt), sonst nichts geändert.
+
+Build: `mvn -B -ntp -pl j-lawyer-client -am -Dmaven.test.failure.ignore=true -Dmaven.compiler.release= -Dmaven.compiler.source=17 -Dmaven.compiler.target=17 clean package`
+JDK: Ubuntu OpenJDK 17.0.20 plus OpenJFX 17.0.9 aus Maven Central per jlink (BellSoft-Hosts im Cloud-Proxy gesperrt), deshalb `--release` durch source/target 17 ersetzt.
+Ergebnis: Build läuft durch, weil Testfehler ignoriert werden. Ausgeführt 273, fehlgeschlagen 17 (FtpTest 6, SftpTest 6, SmbTest 5, wie auf master), Fehler 0, übersprungen 0. Client 86 ausgeführt, 0 fehlgeschlagen (ServerErrorUtilsTest 5 von 5). Gleiche Zahlen wie vor dem Umzug. `git merge-tree` gegen master 05f6b4350: Exit 0.
+

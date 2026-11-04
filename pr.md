@@ -7,15 +7,15 @@ Wer unter Einstellungen > Akten > Akten-Etiketten oder Einstellungen > Dokumente
 Die Servermethoden sind per `@RolesAllowed` geschützt: `createOptionGroup` mit `createOptionGroupRole`, `removeOptionGroup` mit `deleteOptionGroupRole`. Das Umbenennen an vorhandenen Akten, Dokumenten und Adressen braucht zusätzlich `writeArchiveFileRole` bzw. `writeAddressRole`. Fehlt die Rolle, lehnt der Server den Aufruf mit einer `EJBAccessException` ab. `OptionGroupConfigurationDialog` und die Umbenennen-Handler zeigen dann einfach `ex.getMessage()` an.
 
 ## Fix
-- `UserUtils.isPermissionDenied(Throwable)` erkennt eine `EJBAccessException`, auch wenn sie als Ursache in einer anderen Exception steckt.
-- `UserUtils.getServerErrorMessage(Throwable)` liefert in diesem Fall den neuen Text `msg.permissionrequired` aus `JKanzleiGUI.properties` (de und en): "Für diese Aktion fehlt Ihnen die erforderliche Berechtigung. Wenden Sie sich gegebenenfalls an Ihren Administrator." Bei allen anderen Fehlern bleibt es bei `ex.getMessage()`.
+- `ServerErrorUtils.isPermissionDenied(Throwable)` erkennt eine `EJBAccessException`, auch wenn sie als Ursache in einer anderen Exception steckt.
+- `ServerErrorUtils.getServerErrorMessage(Throwable)` liefert in diesem Fall den neuen Text `msg.permissionrequired` aus `JKanzleiGUI.properties` (de und en): "Für diese Aktion fehlt Ihnen die erforderliche Berechtigung. Wenden Sie sich gegebenenfalls an Ihren Administrator." Bei allen anderen Fehlern bleibt es bei `ex.getMessage()`.
 - Die Suche in der Ursachenkette ist auf 20 Ebenen begrenzt, damit eine zyklische Kette nicht endlos läuft.
 - `OptionGroupConfigurationDialog` (Hinzufügen, Löschen, Umbenennen) und die Umbenennen-Handler `OptionGroupCaseTagRename`, `OptionGroupCaseDocumentTagRename` und `OptionGroupAddressTagRename` verwenden diese Meldung.
 
 Der Dialog wird auch für die anderen einfachen Wertelisten genutzt (z.B. Anreden, Titel, Adress-Etiketten). Dort erscheint der Hinweis genauso. Keine Änderung an `.form`-Dateien, nur an den Rümpfen der Event-Handler.
 
 ## Verifiziert
-- Neuer `UserUtilsTest` mit 5 Tests: eine direkte und eine verschachtelte `EJBAccessException` ergeben den Hinweistext, andere Fehler behalten ihre Meldung, `null` gilt nicht als fehlende Berechtigung, eine zyklische Ursachenkette führt nicht zu einer Endlosschleife.
+- Neuer `ServerErrorUtilsTest` mit 5 Tests: eine direkte und eine verschachtelte `EJBAccessException` ergeben den Hinweistext, andere Fehler behalten ihre Meldung, `null` gilt nicht als fehlende Berechtigung, eine zyklische Ursachenkette führt nicht zu einer Endlosschleife.
 - Build: `mvn -B -ntp -pl j-lawyer-client -am -Dmaven.test.failure.ignore=true -Dmaven.compiler.release= -Dmaven.compiler.source=17 -Dmaven.compiler.target=17 clean package`
 - JDK: Ubuntu OpenJDK 17.0.20 und OpenJFX 17.0.9 aus Maven Central, per jlink zu einem JDK zusammengefügt, weil die BellSoft-Hosts im Cloud-Proxy gesperrt waren. Mit diesem JDK sieht `--release 17` die JavaFX-Module nicht, deshalb `source`/`target` 17 statt `release`.
 - Ergebnis: Der Build läuft durch, weil Testfehler mit `-Dmaven.test.failure.ignore=true` ignoriert werden. Fehlschlagende Testklassen sind nur FtpTest, SftpTest und SmbTest in j-lawyer-server-common (sie brauchen FTP-, SFTP- und SMB-Server), genau wie auf master. Client: 86 Tests, 0 Fehler (master: 81).
