@@ -2,6 +2,7 @@
 
 - Branch: `fix/3234-dateiname-bei-beteiligtenwechsel` (fork derspotter/j-lawyer-org), base upstream/master 05f6b4350
 - Commits (newest first):
+  - 69604ea41 derspotter <jayjag@posteo.de> | fix(documents): erzeugter Dateiname mit Zeilenumbruch aus einem Platzhalter gilt nicht als eingegeben. Refs #3234
   - 575f6d278 derspotter <jayjag@posteo.de> | fix(documents): eingegebener Dateiname bleibt auch bei mehreren Änderungen der Beteiligten nacheinander erhalten. Refs #3234
   - f1c580a40 derspotter <jayjag@posteo.de> | fix(documents): Dokument aus Vorlage behält einen eingegebenen Dateinamen, wenn danach Beteiligte oder der Briefkopf geändert werden. Refs #3234
 
@@ -9,13 +10,13 @@
 
 | File | + | - |
 |---|---|---|
-| `j-lawyer-client/src/main/java/com/jdimension/jlawyer/client/editors/files/AddDocumentFromTemplateDialog.java` | 46 | 3 |
-| `j-lawyer-client/src/test/java/com/jdimension/jlawyer/client/editors/files/DocumentFileNameTest.java` | 717 | 0 |
-| total | 763 | 3 |
+| `j-lawyer-client/src/main/java/com/jdimension/jlawyer/client/editors/files/AddDocumentFromTemplateDialog.java` | 49 | 3 |
+| `j-lawyer-client/src/test/java/com/jdimension/jlawyer/client/editors/files/DocumentFileNameTest.java` | 737 | 0 |
+| total | 786 | 3 |
 
 ## Build and tests
 
-JDK: Ubuntu OpenJDK 17.0.20 + OpenJFX 17.0.9 from Maven Central, combined with jlink. Maven 3.9.11. Branch at commit 575f6d278 built (started 04.11.2026 08:07 UTC) and master 05f6b4350 built (04.11.2026, in a separate worktree) with the identical command in the same container:
+JDK: Ubuntu OpenJDK 17.0.20 + OpenJFX 17.0.9 from Maven Central, combined with jlink. Maven 3.9.11. Branch at commit 69604ea41 built (started 04.11.2026 08:18 UTC) and master 05f6b4350 built (04.11.2026, in a separate worktree) with the identical command in the same container:
 
 ```
 mvn -B -ntp -pl j-lawyer-client -am -Dmaven.test.failure.ignore=true -Dmaven.compiler.release= -Dmaven.compiler.source=17 -Dmaven.compiler.target=17 clean package
@@ -23,12 +24,12 @@ mvn -B -ntp -pl j-lawyer-client -am -Dmaven.test.failure.ignore=true -Dmaven.com
 
 | Module | branch total / executed / skipped / failed | master total / executed / skipped / failed |
 |---|---|---|
-| j-lawyer-client | 118 / 118 / 0 / 0 | 113 / 113 / 0 / 0 |
+| j-lawyer-client | 120 / 120 / 0 / 0 | 113 / 113 / 0 / 0 |
 | j-lawyer-cloud | 4 / 4 / 0 / 0 | 4 / 4 / 0 / 0 |
 | j-lawyer-fax | 23 / 23 / 0 / 0 | 23 / 23 / 0 / 0 |
 | j-lawyer-server-common | 118 / 118 / 0 / 17 | 118 / 118 / 0 / 17 |
 | j-lawyer-server-entities | 56 / 56 / 0 / 0 | 56 / 56 / 0 / 0 |
-| total | 319 / 319 / 0 / 17 | 314 / 314 / 0 / 17 |
+| total | 321 / 321 / 0 / 17 | 314 / 314 / 0 / 17 |
 
 Failing tests: identical to master
 
@@ -65,3 +66,10 @@ Failing tests: identical to master
    - Regression test `DocumentFileNameTest#testSeveralPartyChangesKeepTypedName` plays exactly the reported sequence (generated Brief_Mueller, typed Brief_Schmidt, select Schmidt, select Meier, expect Brief_Schmidt) and then checks that another template resets the name and later party changes regenerate it again. The four existing tests now use the same class and set up their state through it.
    - Red check: a copy of 575f6d278 where only `nameToShow()` was changed back to the f1c580a40 logic (remembered name always advances) fails exactly `testSeveralPartyChangesKeepTypedName` with `expected:<Brief_[Schmidt]> but was:<Brief_[Meier]>` (5 run, 1 failure), the other four pass. Command: the build command below with `-Dtest=DocumentFileNameTest -Dsurefire.failIfNoSpecifiedTests=false`.
    - Upstream master is now ee21b88d3. `git merge-tree` of 575f6d278 with it is clean, and master changed neither `AddDocumentFromTemplateDialog` nor `PartiesPanel` since 05f6b4350. Not rebased.
+
+## Antwort auf Review 04.11. (2)
+1. [P2] An untouched generated name with a line break counts as edited: agreed, fixed in 69604ea41. `FileNameSuggestion` remembered `docName`, but `JTextField` replaces `\n` with a space when the text is set (the field's document filters newlines). `FileUtils.sanitizeFileName()` keeps line breaks, so a multi-line placeholder value such as `{{GEGNER_EIGENE3}}` reaches the field, and the next party change compared the field text with a different string and kept the old name.
+   - `nameToShow()` is replaced by `showIn(JTextField field, String generatedName, boolean keepEditedName)`. It compares with `field.getText()`, sets the generated name and then remembers `field.getText()`, so the remembered name is exactly what the field shows, whatever the field does with the text. The dialog calls `fileNameSuggestion.showIn(txtFileName, docName, keepEditedName)`.
+   - `DocumentFileNameTest` now works on a real `JTextField` and types by setting the field's text. The first-name case is split into one test per trigger, because each test uses one field. New `testGeneratedNameWithLineBreakIsNotSeenAsEdited`: generated `Brief_Akte\nMueller` is shown as `Brief_Akte Mueller`, then a party change to `Brief_Akte\nMeier` must show `Brief_Akte Meier`. 7 tests in the class.
+   - Red check: a copy of 69604ea41 where only the remembered value was changed back to `generatedName` (as in 575f6d278) fails exactly `testGeneratedNameWithLineBreakIsNotSeenAsEdited` with `expected:<Brief_Akte M[ei]er> but was:<Brief_Akte M[uell]er>` (7 run, 1 failure), the other six pass. The test runs headless in the Maven build, a `JTextField` needs no display. Command: the build command below with `-Dtest=DocumentFileNameTest -Dsurefire.failIfNoSpecifiedTests=false`.
+   - Upstream master is now 3afc150f9 (after 54221d151). `git merge-tree` of 69604ea41 with it is clean, and master changed neither `AddDocumentFromTemplateDialog`, `PartiesPanel` nor the client pom since 05f6b4350. Not rebased.
