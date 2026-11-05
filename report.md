@@ -2,6 +2,7 @@
 
 - Branch: `fix/restore-sql-fehler-erkennen` (fork derspotter/j-lawyer-org), base upstream/master 7b3b3dfa8
 - Commits (newest first):
+  - 77e9440ef derspotter <jayjag@posteo.de> | fix(backup): Wiederherstellung fragt beim ersten Fehler auch mit dem MariaDB-Client, bevor weitere Anweisungen laufen. Die Datenbanksicherung wird dem mysql-Client als Eingabe gegeben, Löschen und Anlegen der Datenbank laufen vorher getrennt und brechen bei jedem Fehler ab. Fehler des Clients ohne Fehlernummer und eine fehlende Sicherung gelten immer als Fehlschlag. Schließt man die Oberfläche während einer Rückfrage, wird abgebrochen. Refs #2592
   - f7aa51e4b derspotter <jayjag@posteo.de> | fix(backup): Nach einem Fehler beim Einspielen der Datenbanksicherung kann die Wiederherstellung abgebrochen oder fortgesetzt werden. Fortsetzen spielt die Sicherung bis zum Ende ein und überspringt Anweisungen mit Fehlern, am Ende werden alle Fehler mit dem Pfad der ausgepackten Sicherung aufgelistet. Die Oberfläche fragt per Dialog, die Konsole fragt nach oder setzt mit --ignore-db-errors ohne Rückfrage fort. Refs #2592
   - e256acae0 derspotter <jayjag@posteo.de> | fix(backup): Wiederherstellung meldet Fehler beim Einspielen der Datenbanksicherung, statt Erfolg anzuzeigen. Refs #2592
 
@@ -9,17 +10,20 @@
 
 | File | + | - |
 |---|---|---|
-| `j-lawyer-backupmgr/src/main/java/org/jlawyer/backupmgr/BackupManagerLauncher.java` | 42 | 0 |
-| `j-lawyer-backupmgr/src/main/java/org/jlawyer/backupmgr/controller/BackupMgrController.java` | 57 | 1 |
-| `j-lawyer-backupmgr/src/main/java/org/jlawyer/backupmgr/impl/DatabaseImport.java` | 840 | 0 |
-| `j-lawyer-backupmgr/src/main/java/org/jlawyer/backupmgr/impl/RestoreExecutor.java` | 31 | 29 |
+| `j-lawyer-backupmgr/src/main/java/org/jlawyer/backupmgr/BackupManager.java` | 13 | 0 |
+| `j-lawyer-backupmgr/src/main/java/org/jlawyer/backupmgr/BackupManagerLauncher.java` | 41 | 0 |
+| `j-lawyer-backupmgr/src/main/java/org/jlawyer/backupmgr/controller/BackupMgrController.java` | 52 | 1 |
+| `j-lawyer-backupmgr/src/main/java/org/jlawyer/backupmgr/controller/UiQuestion.java` | 730 | 0 |
+| `j-lawyer-backupmgr/src/main/java/org/jlawyer/backupmgr/impl/DatabaseImport.java` | 868 | 0 |
+| `j-lawyer-backupmgr/src/main/java/org/jlawyer/backupmgr/impl/RestoreExecutor.java` | 38 | 29 |
 | `j-lawyer-backupmgr/src/test/java/org/jlawyer/backupmgr/BackupManagerLauncherTest.java` | 694 | 0 |
-| `j-lawyer-backupmgr/src/test/java/org/jlawyer/backupmgr/impl/DatabaseImportTest.java` | 869 | 0 |
-| total | 2533 | 30 |
+| `j-lawyer-backupmgr/src/test/java/org/jlawyer/backupmgr/controller/UiQuestionTest.java` | 711 | 0 |
+| `j-lawyer-backupmgr/src/test/java/org/jlawyer/backupmgr/impl/DatabaseImportTest.java` | 935 | 0 |
+| total | 4082 | 30 |
 
 ## Build and tests
 
-JDK: Ubuntu OpenJDK 17.0.20 + OpenJFX 17.0.9 from Maven Central, combined with jlink. Maven 3.9.11. Branch at commit f7aa51e4b built (started 05.11.2026 08:31 UTC) and master d34cd0531 built (05.11.2026, in a separate worktree) with the identical command in the same container:
+JDK: Ubuntu OpenJDK 17.0.20 + OpenJFX 17.0.9 from Maven Central, combined with jlink. Maven 3.9.11. Branch at commit 77e9440ef built (started 05.11.2026 08:57 UTC) and master d34cd0531 built (05.11.2026, in a separate worktree) with the identical command in the same container:
 
 ```
 mvn -B -ntp -pl j-lawyer-backupmgr -am -Dmaven.test.failure.ignore=true -Dmaven.compiler.release= -Dmaven.compiler.source=17 -Dmaven.compiler.target=17 clean package
@@ -27,8 +31,8 @@ mvn -B -ntp -pl j-lawyer-backupmgr -am -Dmaven.test.failure.ignore=true -Dmaven.
 
 | Module | branch total / executed / skipped / failed | master total / executed / skipped / failed |
 |---|---|---|
-| j-lawyer-backupmgr | 14 / 14 / 0 / 0 | n/a |
-| total | 14 / 14 / 0 / 0 | 0 / 0 / 0 / 0 |
+| j-lawyer-backupmgr | 20 / 20 / 0 / 0 | n/a |
+| total | 20 / 20 / 0 / 0 | 0 / 0 / 0 / 0 |
 
 Failing tests: identical to master
 
@@ -114,3 +118,56 @@ In every run the document from `archivefiles` was restored before the database s
 
 ### Not tested
 - GUI dialogs (no display here), Windows and macOS paths, encrypted backups, MySQL 5.7 clients.
+
+## Antwort auf Review 05.11.
+All five points agreed, fixed in 77e9440ef (one new commit on f7aa51e4b, no force-push). This supersedes the parts of "Antwort auf Jens 04.11." about `-e "...source..."`, the dump path taken from the error line, the MariaDB run without a second pass and the clean merge with #3767.
+
+### Measured first (05.11., same dump as above, dump on stdin: `mysql ... <db> < dump.sql`)
+
+| client -> server | options | exit | stops at first error | rows imported |
+|---|---|---|---|---|
+| MySQL 8.0.46 -> MySQL 8.0.46 | none | 1 | yes | 1 |
+| MySQL 8.0.46 -> MySQL 8.0.46 | `--force` | 0 | no, both errors reported | 1,2,3 |
+| MariaDB 10.11.14 -> MariaDB 10.11.14 | none | 1 | yes | 1 |
+| MariaDB 10.11.14 -> MariaDB 10.11.14 | `--force` | 0 | no | 1,2,3 |
+| MariaDB 10.11.14 -> MySQL 8.0.46 | none | 1 | yes | 1 |
+| MySQL 8.0.46 -> MariaDB 10.11.14 | none / `--force` | 1 / 0 | yes / no | 1 / 1,2,3 |
+
+Error lines on stdin: `ERROR 1273 (HY000) at line 3: Unknown collation: 'utf8mb4_bogus_ci'`, the line is the line of the dump, there is no file name any more. Other formats seen: `ERROR at line 1: Failed to open file '...', error: 2` (old `source` of a missing file, exit 0 with `--force`, confirms point 1), `ERROR at line 3: Unknown command '\x'.` (MariaDB client, no number, with `--force` it goes on), `ERROR 1049 (42000): Unknown database 'x'` (no line, exit 1 even with `--force`), `ERROR 1044 (42000) at line 1: Access denied ... to database` (drop or create refused). So stdin batch mode gives the real stop at the first error on both clients without detecting the flavour (`--abort-source-on-error` exists only in the MariaDB client) and works cleanly.
+
+1. [P1] Missing dump ends as success: fixed.
+   - Any line starting with `ERROR` is an error now (`^ERROR\b`), also the client's own errors without a number. Only server errors for a statement of the dump count as skippable: `^ERROR (\d+) \(\w+\) at line \d+: ` with a code outside 2000 to 2999 (client errors such as 2013 lost connection). Every other error fails the restore in every run, also with `--force` and after continuing (`importDump`, loop over the final errors).
+   - The dump is now passed as the input of the client, `runImport()` checks that it is a file first and fails with "Die Datenbanksicherung <path> fehlt." before the database is dropped.
+   - Tests: `testClientErrorFailsEvenWithForce` (`ERROR at line 1: Failed to open file ...` with exit 0 and `--force`, access denied, lost connection after continuing), `testMissingDumpFailsBeforeTheDatabaseIsDropped`, `testErrorLines`.
+   - E2E: archive without `jlawyerdb-dump.sql`, `--ignore-db-errors`: f7aa51e4b printed `ERROR at line 1: Failed to open file ...` and "Backup erfolgreich wiederhergestellt." with exit 0 and an empty database (both clients). Now exit 1 "Datenbankwiederherstellung fehlgeschlagen: Die Datenbanksicherung .../jlawyerdb-dump.sql fehlt." and the database restored just before is unchanged (2 tables, 2 and 3 rows, both clients).
+2. [P2] `--force` also skipped failed preparation steps: fixed.
+   - Each run is two client calls (`DatabaseImport.runImport()`): the existing `-e` command, now only `drop database if exists X` and `create database X`, without `--force`. A non-zero exit or any error line fails the restore. Then `mysql -h -P -u -p [--force] X` with the dump as input. The database is the last argument, if it is missing the client fails with 1049 and exit 1 even with `--force`. `--force` is put right after the program name, without `-e` there is no reset.
+   - The same applies to the second run after "continue" and to `--ignore-db-errors`, both go through `runImport()`.
+   - Tests: `testPreparationErrorsAlwaysFail` (error with exit 1 and with exit 0, with and without force, the import is never started), `testNothingAfterTheErrorRunsBeforeTheAnswer` (log shows prepare, import, prepare, import --force).
+   - E2E: user `weak` with only SELECT on the database, `--ignore-db-errors`, MySQL 8: f7aa51e4b ended with exit 2 "mit Fehlern abgeschlossen" listing 2 x 1044 for drop/create and 6 x 1142 for the dump. Now exit 1 "Datenbankwiederherstellung fehlgeschlagen: ERROR 1044 (42000) at line 1: Access denied for user 'weak'@'%' to database 'jlrestore'", the existing database is unchanged.
+   - pr.md: the bullet about errors outside the dump now lists what always fails, including with `--ignore-db-errors`.
+3. [P2] No real abort with MariaDB: fixed with the stdin lead, no client detection needed.
+   - The first run (without `--force`) stops at the first error with both clients, the handler is asked after that run ended and before anything else is imported. "Continue" runs drop/create and the import with `--force` again, so the database starts empty, no statement is applied twice. "Abort" leaves the database as imported up to the failing statement.
+   - The dump path is no longer in the error lines, so `restoreDatabase()` passes it explicitly (`dump.getAbsolutePath()`), the messages say that the line numbers refer to that file.
+   - Test: `testNothingAfterTheErrorRunsBeforeTheAnswer` with a stand-in client (shell script) that stops at the first BAD line unless `--force` is its first argument: at the question only `GOOD 1` is in the "database", after continuing `GOOD 1`, `GOOD 2`.
+   - E2E with a probe of `information_schema` while the console question is open (Python driver reads the output, queries the database, then answers):
+     - f7aa51e4b, MariaDB client: tables `cases,contacts` already there at the question (the statements after the error had run).
+     - now, MariaDB client and MySQL 8 client: only `cases`. Answer j: 2 errors listed, `cases` 2 rows, `contacts` 3 rows, exit 2. Answer n (MariaDB): exit 1, only `cases`.
+   - The old `commit` statement after `source` is gone. The dump runs with autocommit as before, mysqldump with default options writes no `SET autocommit=0`.
+4. [P2] Closing the window could leave a process waiting forever: fixed.
+   - New package-private `controller.UiQuestion`: `ask(dialog)` posts the dialog with `Platform.runLater` and waits on a `CompletableFuture`. `close()` marks it closed and completes a pending question with false, later questions return false at once. A dialog that throws or a poster that throws (toolkit not running) also give false.
+   - `BackupManager.start()` keeps the controller from the `FXMLLoader`, `BackupManager.stop()` (called by JavaFX when it exits, also after the last window closed) calls `controller.shutdown()`, which closes the question. The restore then gets "abort", fails as usual and the thread ends, so the JVM can exit. Implicit exit is unchanged. While the dialog is open it is a window itself, so closing only the main window does not stop JavaFX.
+   - Tests: `UiQuestionTest` (answer, failing dialog and poster, closed before asking, close while waiting with a dropped task like `Platform.runLater` after exit).
+   - Not run in a real JavaFX window (no display here).
+5. [P2] Merged with #3767 the final message names a deleted file: pr.md "Nicht abgedeckt" now says that whichever of #3758 and #3767 is merged second keeps the working directory when the import reported errors, and that the unencrypted dump then stays until the user removes it. Nothing added to #3767.
+
+### Red check
+Copy of 77e9440ef with only these four changes back to the old behaviour: the final errors are not checked for non-statement errors, no check for the dump file, preparation errors ignored with force, `UiQuestion.close()` does not answer a pending question. `-Dtest=DatabaseImportTest,UiQuestionTest`: exactly `testClientErrorFailsEvenWithForce`, `testMissingDumpFailsBeforeTheDatabaseIsDropped`, `testPreparationErrorsAlwaysFail` (failures) and `testCloseWhileWaiting` (TimeoutException) fail, the other 14 pass. Point 3 depends on the real client, its red check is the E2E probe against f7aa51e4b above.
+
+### Merge with #3767 (fix/2592-restore-mariadb-collation, now 8643776ba)
+- No longer conflict free: both change the `-e` line of `restoreDatabase()` (#3767 the `source` path, this branch removes `use` and `source` from it). With upstream/master d34cd0531 the merge is still clean.
+- Resolution, tested in a scratch worktree (temporary merge commit, not pushed): take this branch's `-e` line (the one that only drops and creates the database), and delete this branch's line that creates the local `File dump` from `backup + "jlawyerdb-dump.sql"`, because #3767 passes `File dump` into `restoreDatabase()` and has no `backup` any more. Without that deletion the merge does not compile (duplicate `dump`, unknown `backup`), so it can not be missed. #3767's local `dumpPath` is then unused, harmless.
+- Resolved state: BUILD SUCCESS, 41 tests, 0 failures (`SqlDumpUtilsTest` 18, `RestorePreparationTest` 3, `DatabaseImportTest` 14, `UiQuestionTest` 4, `BackupManagerLauncherTest` 2). E2E with MySQL 8 client, answer j: only `cases` at the question, exit 2, messages name `.../backup/jlawyerdb-restore-<n>/jlawyerdb-dump.sql`, which #3767 deletes at the end (point 5). MariaDB clean dump: exit 0.
+
+### Not tested
+- GUI in a real JavaFX window, Windows and macOS, encrypted backups.
