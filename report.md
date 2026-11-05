@@ -2,6 +2,7 @@
 
 - Branch: `fix/restore-sql-fehler-erkennen` (fork derspotter/j-lawyer-org), base upstream/master 7b3b3dfa8
 - Commits (newest first):
+  - 709a86f00 derspotter <jayjag@posteo.de> | fix(backup): Der erste Import läuft ausdrücklich mit --skip-force, damit ein force aus der Konfiguration des mysql-Clients die Rückfrage beim ersten Fehler nicht umgeht. Refs #2592
   - 77e9440ef derspotter <jayjag@posteo.de> | fix(backup): Wiederherstellung fragt beim ersten Fehler auch mit dem MariaDB-Client, bevor weitere Anweisungen laufen. Die Datenbanksicherung wird dem mysql-Client als Eingabe gegeben, Löschen und Anlegen der Datenbank laufen vorher getrennt und brechen bei jedem Fehler ab. Fehler des Clients ohne Fehlernummer und eine fehlende Sicherung gelten immer als Fehlschlag. Schließt man die Oberfläche während einer Rückfrage, wird abgebrochen. Refs #2592
   - f7aa51e4b derspotter <jayjag@posteo.de> | fix(backup): Nach einem Fehler beim Einspielen der Datenbanksicherung kann die Wiederherstellung abgebrochen oder fortgesetzt werden. Fortsetzen spielt die Sicherung bis zum Ende ein und überspringt Anweisungen mit Fehlern, am Ende werden alle Fehler mit dem Pfad der ausgepackten Sicherung aufgelistet. Die Oberfläche fragt per Dialog, die Konsole fragt nach oder setzt mit --ignore-db-errors ohne Rückfrage fort. Refs #2592
   - e256acae0 derspotter <jayjag@posteo.de> | fix(backup): Wiederherstellung meldet Fehler beim Einspielen der Datenbanksicherung, statt Erfolg anzuzeigen. Refs #2592
@@ -14,16 +15,16 @@
 | `j-lawyer-backupmgr/src/main/java/org/jlawyer/backupmgr/BackupManagerLauncher.java` | 41 | 0 |
 | `j-lawyer-backupmgr/src/main/java/org/jlawyer/backupmgr/controller/BackupMgrController.java` | 52 | 1 |
 | `j-lawyer-backupmgr/src/main/java/org/jlawyer/backupmgr/controller/UiQuestion.java` | 730 | 0 |
-| `j-lawyer-backupmgr/src/main/java/org/jlawyer/backupmgr/impl/DatabaseImport.java` | 868 | 0 |
+| `j-lawyer-backupmgr/src/main/java/org/jlawyer/backupmgr/impl/DatabaseImport.java` | 867 | 0 |
 | `j-lawyer-backupmgr/src/main/java/org/jlawyer/backupmgr/impl/RestoreExecutor.java` | 38 | 29 |
 | `j-lawyer-backupmgr/src/test/java/org/jlawyer/backupmgr/BackupManagerLauncherTest.java` | 694 | 0 |
 | `j-lawyer-backupmgr/src/test/java/org/jlawyer/backupmgr/controller/UiQuestionTest.java` | 711 | 0 |
-| `j-lawyer-backupmgr/src/test/java/org/jlawyer/backupmgr/impl/DatabaseImportTest.java` | 935 | 0 |
-| total | 4082 | 30 |
+| `j-lawyer-backupmgr/src/test/java/org/jlawyer/backupmgr/impl/DatabaseImportTest.java` | 947 | 0 |
+| total | 4093 | 30 |
 
 ## Build and tests
 
-JDK: Ubuntu OpenJDK 17.0.20 + OpenJFX 17.0.9 from Maven Central, combined with jlink. Maven 3.9.11. Branch at commit 77e9440ef built (started 05.11.2026 08:57 UTC) and master d34cd0531 built (05.11.2026, in a separate worktree) with the identical command in the same container:
+JDK: Ubuntu OpenJDK 17.0.20 + OpenJFX 17.0.9 from Maven Central, combined with jlink. Maven 3.9.11. Branch at commit 709a86f00 built (started 05.11.2026 09:09 UTC) and master d34cd0531 built (05.11.2026, in a separate worktree) with the identical command in the same container:
 
 ```
 mvn -B -ntp -pl j-lawyer-backupmgr -am -Dmaven.test.failure.ignore=true -Dmaven.compiler.release= -Dmaven.compiler.source=17 -Dmaven.compiler.target=17 clean package
@@ -31,8 +32,8 @@ mvn -B -ntp -pl j-lawyer-backupmgr -am -Dmaven.test.failure.ignore=true -Dmaven.
 
 | Module | branch total / executed / skipped / failed | master total / executed / skipped / failed |
 |---|---|---|
-| j-lawyer-backupmgr | 20 / 20 / 0 / 0 | n/a |
-| total | 20 / 20 / 0 / 0 | 0 / 0 / 0 / 0 |
+| j-lawyer-backupmgr | 21 / 21 / 0 / 0 | n/a |
+| total | 21 / 21 / 0 / 0 | 0 / 0 / 0 / 0 |
 
 Failing tests: identical to master
 
@@ -171,3 +172,6 @@ Copy of 77e9440ef with only these four changes back to the old behaviour: the fi
 
 ### Not tested
 - GUI in a real JavaFX window, Windows and macOS, encrypted backups.
+
+## Antwort auf Review 05.11. (2)
+- [P2] force from the client's option files: agreed, fixed in 709a86f00. The first import now passes `--skip-force` (the second `--force`). Measured with `[mysql]` `force` in `~/.my.cnf`: without an option both clients run past the error (exit 0, rows 1,2,3), with `--skip-force` both stop at it (exit 1, row 1) and accept the option. New test `testForceFromTheOptionFilesIsSwitchedOff` (stand-in client whose default is force) and `testNothingAfterTheErrorRunsBeforeTheAnswer` now checks `import --skip-force jlawyerdb`. With the 77e9440ef version of `DatabaseImport` exactly these two fail. E2E with that `~/.my.cnf`, answer n: 77e9440ef had `cases,contacts` in the database while the question was open, 709a86f00 only `cases` (MariaDB and MySQL 8 client), continue still ends with exit 2 and both tables complete. Build 709a86f00: 21 tests, 0 failures. The resolved merge with #3767 8643776ba (same conflict, same resolution): 42 tests, 0 failures.
