@@ -1,7 +1,9 @@
 # Report 2460
 
-- Branch: `fix/2460-ablegen-als-datei-ersetzen` (fork derspotter/j-lawyer-org), base upstream/master 7b3b3dfa8
+- Branch: `fix/2460-ablegen-als-datei-ersetzen` (fork derspotter/j-lawyer-org), base upstream/master 4e721956a
 - Commits (newest first):
+  - 0361eb863 derspotter <jayjag@posteo.de> | fix(documents): Ablegen als, Als PDF zur Akte speichern und Duplizieren eines PDF klären den Namen mit derselben Hilfsmethode und ersetzen auf dieselbe Weise. Das zu ersetzende Dokument wird ohne Rücksicht auf Groß- und Kleinschreibung gefunden. DocumentReplacement entfällt, die beiden Server-Korrekturen bleiben. Refs #2460
+  - 171c5bbb5 derspotter <jayjag@posteo.de> | Merge upstream master 4e721956a in fix/2460-ablegen-als-datei-ersetzen
   - 5a13f3300 derspotter <jayjag@posteo.de> | fix(documents): Umbenennen benennt die Datei eines noch unter seinem Namen gespeicherten Dokuments vorher wie beim Lesen in seine ID um, sonst ist der Inhalt danach nicht mehr zu finden. Der Suchindex nimmt bei einer Aktualisierung nur noch vorhandene Dokumente außerhalb des Papierkorbs auf, wie schon bei Metadaten. Refs #2460
   - c47d1e66b derspotter <jayjag@posteo.de> | fix(documents): Ersetzen löscht nichts mehr endgültig. Eine Datei im Papierkorb mit dem Namen wird wie eine in der Akte in Ersetzt_ umbenannt und bleibt im Papierkorb, bis dessen Aufbewahrungsfrist sie entfernt. Bei einem Fehler bekommt sie ihren Namen zurück, wurde sie inzwischen wiederhergestellt, bleibt sie umbenannt in der Akte und die Meldung nennt das. Refs #2460
   - f84405b16 derspotter <jayjag@posteo.de> | Revert "fix(documents): Endgültiges Löschen aus dem Papierkorb liest das Dokument im Server erneut und gesperrt"
@@ -18,17 +20,17 @@
 
 | File | + | - |
 |---|---|---|
-| `j-lawyer-client/src/main/java/com/jdimension/jlawyer/client/editors/files/ArchiveFilePanel.java` | 85 | 4 |
-| `j-lawyer-client/src/main/java/com/jdimension/jlawyer/client/editors/files/DocumentReplacement.java` | 1080 | 0 |
-| `j-lawyer-client/src/test/java/com/jdimension/jlawyer/client/editors/files/DocumentReplacementTest.java` | 1303 | 0 |
+| `j-lawyer-client/src/main/java/com/jdimension/jlawyer/client/editors/files/ArchiveFilePanel.java` | 92 | 85 |
+| `j-lawyer-client/src/main/java/com/jdimension/jlawyer/client/editors/files/DocumentTargetName.java` | 764 | 0 |
+| `j-lawyer-client/src/test/java/com/jdimension/jlawyer/client/editors/files/DocumentTargetNameTest.java` | 773 | 0 |
 | `j-lawyer-server/j-lawyer-server-ejb/src/main/java/com/jdimension/jlawyer/services/ArchiveFileService.java` | 5 | 0 |
 | `j-lawyer-server/j-lawyer-server-ejb/src/main/java/org/jlawyer/async/SearchIndexProcessor.java` | 4 | 1 |
 | `j-lawyer-server/j-lawyer-server-ejb/src/test/java/com/jdimension/jlawyer/services/RenameDocumentTest.java` | 794 | 0 |
-| total | 3271 | 5 |
+| total | 2432 | 86 |
 
 ## Build and tests
 
-JDK: Ubuntu OpenJDK 17.0.20 + OpenJFX 17.0.9 from Maven Central, combined with jlink. Maven 3.9.11. Branch at commit 5a13f3300 built (started 03.11.2026 23:59 UTC) and master 7b3b3dfa8 built (02.11.2026, in a separate worktree) with the identical command in the same container:
+JDK: Ubuntu OpenJDK 17.0.20 + OpenJFX 17.0.9 from Maven Central, combined with jlink. Maven 3.9.11. Branch at commit 0361eb863 built (started 06.11.2026 11:35 UTC) and master 4e721956a built (06.11.2026, in a separate worktree) with the identical command in the same container:
 
 ```
 mvn -B -ntp -pl j-lawyer-client,j-lawyer-server/j-lawyer-server-ejb -am -Dmaven.test.failure.ignore=true -Dmaven.compiler.release= -Dmaven.compiler.source=17 -Dmaven.compiler.target=17 clean package
@@ -36,13 +38,13 @@ mvn -B -ntp -pl j-lawyer-client,j-lawyer-server/j-lawyer-server-ejb -am -Dmaven.
 
 | Module | branch total / executed / skipped / failed | master total / executed / skipped / failed |
 |---|---|---|
-| j-lawyer-client | 101 / 101 / 0 / 0 | 81 / 81 / 0 / 0 |
+| j-lawyer-client | 141 / 141 / 0 / 0 | 135 / 135 / 0 / 0 |
 | j-lawyer-cloud | 4 / 4 / 0 / 0 | 4 / 4 / 0 / 0 |
-| j-lawyer-fax | 23 / 23 / 0 / 0 | 23 / 23 / 0 / 0 |
-| j-lawyer-server-common | 104 / 104 / 0 / 17 | 104 / 104 / 0 / 17 |
+| j-lawyer-fax | 26 / 26 / 0 / 0 | 26 / 26 / 0 / 0 |
+| j-lawyer-server-common | 133 / 133 / 0 / 17 | 133 / 133 / 0 / 17 |
 | j-lawyer-server-entities | 56 / 56 / 0 / 0 | 56 / 56 / 0 / 0 |
-| j-lawyer-server/j-lawyer-server-ejb | 830 / 814 / 16 / 1 | 829 / 813 / 16 / 1 |
-| total | 1118 / 1102 / 16 / 18 | 1097 / 1081 / 16 / 18 |
+| j-lawyer-server/j-lawyer-server-ejb | 852 / 836 / 16 / 0 | 851 / 835 / 16 / 0 |
+| total | 1212 / 1196 / 16 / 17 | 1205 / 1189 / 16 / 17 |
 
 Failing tests: identical to master
 
@@ -63,7 +65,6 @@ Failing tests: identical to master
 - j-lawyer-server-common SmbTest#testDelete
 - j-lawyer-server-common SmbTest#testIsFile
 - j-lawyer-server-common SmbTest#testTraverse
-- j-lawyer-server/j-lawyer-server-ejb LibreOfficeODFTest#setReplaceEmptyLine
 
 ## Antwort auf Review 02.11.
 1. [P1] Original deleted before the upload: agreed, fixed in a3d57f3ca. `DocumentReplacement.addReplacing()` stores the new document under a temporary name, then removes the existing one, then renames (`renameDocument()`, which checks name conflicts). Test: a failing upload leaves `removeDocument` / `removeDocumentFromBin` uncalled. If only the final rename fails, the new document stays under its temporary name (stated in the PR).
@@ -227,3 +228,20 @@ pr.md ist angepasst: Fix hat zwei neue Punkte zum Server (migrateDocument beim U
 Endgültige Antwort für den Thread:
 
 - PRRT_kwDOCUQTLc6zSLXZ: Behoben in c47d1e66b und 5a13f3300, anders als zuerst gedacht: Das Ersetzen löscht nichts mehr endgültig, removeDocumentFromBin wird dabei nicht mehr aufgerufen. Liegt die Datei mit dem Namen im Papierkorb, wird sie wie eine Datei in der Akte in Ersetzt_ umbenannt (höchstens 200 Zeichen) und bleibt im Papierkorb, bis die Aufbewahrungsfrist sie entfernt. Stellt ein anderer Client sie zwischen getDocument() und dem Umbenennen wieder her, bleibt sie umbenannt in der Akte, nichts geht verloren, und die Meldung sowie die neu geladene Dokumentliste zeigen sie dort. Scheitert ein späterer Schritt, wird versucht, ihr Namen und Etiketten zurückzugeben, ein Fehler dabei wird gemeldet. Im Server nimmt der Suchindex umbenannte Dateien im Papierkorb nicht mehr auf, und renameDocument verschiebt den Inhalt einer noch unter ihrem Namen gespeicherten Datei vorher auf ihre ID, damit er auffindbar bleibt. Die Serveränderung aus 066677331 ist mit f84405b16 zurückgenommen.
+
+## Antwort auf Jens 05.11.
+Request: replace the client side by the existing logic of "Als PDF zur Akte speichern", one shared helper for the three ways, fix upper and lower case in the lookup, keep `getDocumentsBin()` while `getDocuments(caseId, true)` is not on the remote interface, remove `DocumentReplacement`, `showDocumentsAfterReplacement()` and `DocumentReplacementTest`, keep both server fixes. Done in 0361eb863, after merging upstream master 4e721956a into the branch (171c5bbb5, a merge without conflicts, no rebase, no force-push).
+
+- New small class `DocumentTargetName` (client, `editors.files`): `resolve(name, NameCheck, Questions)` is the former loop of `convertDocumentToPdf()`: as long as `doesDocumentExist()` reports the name, ask whether to replace, on "no" ask for a new name (`FileUtils.getNewFileName()`), check again. It returns the name and whether to replace, null if the question was closed or no new name was entered. `findDocument(documents, name)` looks up the document to replace with `equalsIgnoreCase`, like the server's check.
+- `ArchiveFilePanel.resolveDocumentName(remote, name, title)` plugs in the existing dialogs ("Eine Datei mit dem Namen '…' existiert bereits, soll diese ersetzt werden?", Ja/Nein, closing = cancel). `ArchiveFilePanel.removeDocumentToReplace(remote, name)` is the former removal block: the document among the active documents of the case (`removeDocument()`, `removeDocumentFromBin()`, removed from the list), otherwise among the documents of this case in `getDocumentsBin()` (`removeDocumentFromBin()`), both via `findDocument()`.
+- Callers: `convertDocumentToPdf()` for an existing PDF (resolve, remove, then `addDocument()` with the metadata, same order as before) and for the conversion (resolve, convert, remove right before `addDocument()`, as before), and `mnuDuplicateDocumentAsActionPerformed()` (resolve, convert, remove right before `addDocument()`). The two copies in `convertDocumentToPdf()` are gone.
+- Behaviour changes, now the same for all three ways: closing the replace question cancels (in `convertDocumentToPdf()` it used to open the dialog for a new name), and `Brief.PDF` is found and replaced for `Brief.pdf` (it used to stay, and `addDocument()` failed with the server error).
+- Kept from the earlier menu code: closing the question cancels, a failing move into the folder of the source document only warns (the document is stored and shown). The folder move in `convertDocumentToPdf()` is unchanged.
+- Removed: `DocumentReplacement` (temporary name, renaming the old document, tag reset, roll back, status queries), `DocumentReplacementTest`, `showDocumentsAfterReplacement()`. The replaced document is deleted for good again, as before in "Als PDF zur Akte speichern" and as Jens accepts.
+- `getDocuments(caseId, true)` is not on `ArchiveFileServiceRemote`, so `getDocumentsBin()` stays, filtered by the case as before. The remote interface is not changed.
+- Server fixes unchanged: `git diff` of `j-lawyer-server` between master 4e721956a and the branch has exactly the lines that 5a13f3300 had against its base 7b3b3dfa8 (`renameDocument()` calls `migrateDocument()`, `SearchIndexProcessor` checks `ACTION_UPDATE`), `RenameDocumentTest` is unchanged and passes.
+- No `.form` file is affected.
+- Net diff against master: `ArchiveFilePanel` +92/-85, `DocumentTargetName` 102 lines and `DocumentTargetNameTest` 111 lines (each plus the 662-line license header of the project), the server part as before.
+- Test: `DocumentTargetNameTest` with 6 cases without a server (free name, replace, new names until one is free, replace under the new name, cancel by closing the question or without a new name, case-insensitive lookup).
+- Red check: a copy of 0361eb863 with `equals` instead of `equalsIgnoreCase` in `findDocument()` and a closed question counted as "no" (the former behaviour of `convertDocumentToPdf()`). `-Dtest=DocumentTargetNameTest`: exactly `testFindDocumentIgnoresCase` (no document found for `Brief.pdf`) and `testCancel` (`NoSuchElementException`, the closed question led to the dialog for a new name) fail, the other 4 pass.
+- Not run in a client: the three menu entries. The real-server run of 04.11. covered the server fix in `renameDocument()`, the removed `DocumentReplacement` client code is not part of the PR any more.
