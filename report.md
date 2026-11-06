@@ -2,6 +2,7 @@
 
 - Branch: `fix/3507-pdf-teile-ohne-verweise-auf-original` (fork derspotter/j-lawyer-org), base upstream/master 4e721956a
 - Commits (newest first):
+  - f911b0eb5 derspotter <jayjag@posteo.de> | fix(documents): Aufteilen im Scan-Ordner schließt das Dokument, an dem die Teile bestimmt werden, vor dem Aufteilen, auch bei Abbruch oder Fehler. Refs #3507
   - d2ede8ab8 derspotter <jayjag@posteo.de> | fix(documents): Aufteilen im Scan-Ordner schreibt nur noch die Seiten des jeweiligen Teils in die Teil-PDFs, wie das Aufteilen in der Akte. Die Teile berechnet PdfSplitUtils nach Seitenzahl und an Trennseiten wie bisher, split() lädt die Quelle für jeden Teil neu. Die Akte nutzt split() ebenfalls, PDFBlankPageSplitter entfällt. Refs #3507
   - 26924b4cc derspotter <jayjag@posteo.de> | Merge upstream master 4e721956a in fix/3507-pdf-teile-ohne-verweise-auf-original
   - 89a7dde52 derspotter <jayjag@posteo.de> | fix(documents): PDF aufteilen bestimmt behaltene Formularfelder aus den Widgets der behaltenen Seiten und durchläuft Feldbäume ohne Rekursion, auch bei Zyklen und sehr tiefen Formularen. Refs #3507
@@ -15,15 +16,15 @@
 | File | + | - |
 |---|---|---|
 | `j-lawyer-client/src/main/java/com/jdimension/jlawyer/client/editors/documents/PDFBlankPageSplitter.java` | 0 | 687 |
-| `j-lawyer-client/src/main/java/com/jdimension/jlawyer/client/editors/documents/PDFSplitAction.java` | 32 | 44 |
+| `j-lawyer-client/src/main/java/com/jdimension/jlawyer/client/editors/documents/PDFSplitAction.java` | 88 | 85 |
 | `j-lawyer-client/src/main/java/com/jdimension/jlawyer/client/editors/files/ArchiveFilePanel.java` | 7 | 22 |
 | `j-lawyer-client/src/main/java/com/jdimension/jlawyer/client/utils/pdf/PdfSplitUtils.java` | 1063 | 0 |
 | `j-lawyer-client/src/test/java/org/jlawyer/test/client/utils/PdfSplitUtilsTest.java` | 1349 | 0 |
-| total | 2451 | 753 |
+| total | 2507 | 794 |
 
 ## Build and tests
 
-JDK: Ubuntu OpenJDK 17.0.20 + OpenJFX 17.0.9 from Maven Central, combined with jlink. Maven 3.9.11. Branch at commit d2ede8ab8 built (started 06.11.2026 10:29 UTC) and master 4e721956a built (06.11.2026, in a separate worktree) with the identical command in the same container:
+JDK: Ubuntu OpenJDK 17.0.20 + OpenJFX 17.0.9 from Maven Central, combined with jlink. Maven 3.9.11. Branch at commit f911b0eb5 built (started 06.11.2026 11:43 UTC) and master 4e721956a built (06.11.2026, in a separate worktree) with the identical command in the same container:
 
 ```
 mvn -B -ntp -pl j-lawyer-client -am -Dmaven.test.failure.ignore=true -Dmaven.compiler.release= -Dmaven.compiler.source=17 -Dmaven.compiler.target=17 clean package
@@ -127,3 +128,7 @@ Request: also split in the scan folder with `PdfSplitUtils` (range functions for
 - Not run: `PDFSplitAction` against a server (it needs the observed folder of a running server), no GUI.
 - Cost: `split()` parses the source once per part, for many parts of a large scan this takes longer than the old single `Splitter` run.
 - PR text: the problem is described as references to other pages in the parts, the sentence with the earlier wording is gone.
+
+## Antwort auf Review 06.11.
+1. [P2] Inspection document never closed: agreed, fixed in f911b0eb5. `PDFSplitAction` no longer loads one `PDDocument` before the modes. Each mode loads it in try-with-resources only to get the page count and, for the separator modes, to run the unchanged detection loop (resources, keyword text, rendered page). It is closed when that block ends, also on cancel (`break` leaves the loop inside the block) and on an exception, before `split()` runs. The naming loop of the page-count mode uses the page count from that block. The single-page separator parts were already loaded in try-with-resources. pr.md now says so in its last Fix bullet.
+2. [P2] Public text: pr.md Problem, Ursache and Fix are rewritten neutrally: one shared split for the case and the scan folder, parts contain only their own pages and are correspondingly smaller, the scanner behaviour is unchanged, then the test evidence. The description of what a part of the old version contained and of the reference paths is gone. Verifiziert keeps the test evidence.
