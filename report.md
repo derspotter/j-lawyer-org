@@ -1,7 +1,9 @@
 # Report 3507
 
-- Branch: `fix/3507-pdf-teile-ohne-verweise-auf-original` (fork derspotter/j-lawyer-org), base upstream/master 7b3b3dfa8
+- Branch: `fix/3507-pdf-teile-ohne-verweise-auf-original` (fork derspotter/j-lawyer-org), base upstream/master 4e721956a
 - Commits (newest first):
+  - d2ede8ab8 derspotter <jayjag@posteo.de> | fix(documents): Aufteilen im Scan-Ordner schreibt nur noch die Seiten des jeweiligen Teils in die Teil-PDFs, wie das Aufteilen in der Akte. Die Teile berechnet PdfSplitUtils nach Seitenzahl und an Trennseiten wie bisher, split() lädt die Quelle für jeden Teil neu. Die Akte nutzt split() ebenfalls, PDFBlankPageSplitter entfällt. Refs #3507
+  - 26924b4cc derspotter <jayjag@posteo.de> | Merge upstream master 4e721956a in fix/3507-pdf-teile-ohne-verweise-auf-original
   - 89a7dde52 derspotter <jayjag@posteo.de> | fix(documents): PDF aufteilen bestimmt behaltene Formularfelder aus den Widgets der behaltenen Seiten und durchläuft Feldbäume ohne Rekursion, auch bei Zyklen und sehr tiefen Formularen. Refs #3507
   - fb22fb03f derspotter <jayjag@posteo.de> | fix(documents): PDF aufteilen schreibt keine Formularfelder anderer Seiten mehr in den Teil, auch wenn sie über ein gemeinsames übergeordnetes Feld erreichbar sind. Refs #3507
   - 08a6997f4 derspotter <jayjag@posteo.de> | fix(documents): PDF aufteilen prüft alle gespeicherten Objekte des Teils, Verweise auf behaltene Seiten zeigen auf deren Kopie, Seitenaktionen und Artikel ziehen keine anderen Seiten mehr mit. Refs #3507
@@ -12,14 +14,16 @@
 
 | File | + | - |
 |---|---|---|
-| `j-lawyer-client/src/main/java/com/jdimension/jlawyer/client/editors/files/ArchiveFilePanel.java` | 11 | 18 |
-| `j-lawyer-client/src/main/java/com/jdimension/jlawyer/client/utils/pdf/PdfSplitUtils.java` | 994 | 0 |
-| `j-lawyer-client/src/test/java/org/jlawyer/test/client/utils/PdfSplitUtilsTest.java` | 1189 | 0 |
-| total | 2194 | 18 |
+| `j-lawyer-client/src/main/java/com/jdimension/jlawyer/client/editors/documents/PDFBlankPageSplitter.java` | 0 | 687 |
+| `j-lawyer-client/src/main/java/com/jdimension/jlawyer/client/editors/documents/PDFSplitAction.java` | 32 | 44 |
+| `j-lawyer-client/src/main/java/com/jdimension/jlawyer/client/editors/files/ArchiveFilePanel.java` | 7 | 22 |
+| `j-lawyer-client/src/main/java/com/jdimension/jlawyer/client/utils/pdf/PdfSplitUtils.java` | 1063 | 0 |
+| `j-lawyer-client/src/test/java/org/jlawyer/test/client/utils/PdfSplitUtilsTest.java` | 1349 | 0 |
+| total | 2451 | 753 |
 
 ## Build and tests
 
-JDK: Ubuntu OpenJDK 17.0.20 + OpenJFX 17.0.9 from Maven Central, combined with jlink. Maven 3.9.11. Branch at commit 89a7dde52 built (started 03.11.2026 19:14 UTC) and master 7b3b3dfa8 built (02.11.2026, in a separate worktree) with the identical command in the same container:
+JDK: Ubuntu OpenJDK 17.0.20 + OpenJFX 17.0.9 from Maven Central, combined with jlink. Maven 3.9.11. Branch at commit d2ede8ab8 built (started 06.11.2026 10:29 UTC) and master 4e721956a built (06.11.2026, in a separate worktree) with the identical command in the same container:
 
 ```
 mvn -B -ntp -pl j-lawyer-client -am -Dmaven.test.failure.ignore=true -Dmaven.compiler.release= -Dmaven.compiler.source=17 -Dmaven.compiler.target=17 clean package
@@ -27,12 +31,12 @@ mvn -B -ntp -pl j-lawyer-client -am -Dmaven.test.failure.ignore=true -Dmaven.com
 
 | Module | branch total / executed / skipped / failed | master total / executed / skipped / failed |
 |---|---|---|
-| j-lawyer-client | 95 / 95 / 0 / 0 | 81 / 81 / 0 / 0 |
+| j-lawyer-client | 154 / 154 / 0 / 0 | 135 / 135 / 0 / 0 |
 | j-lawyer-cloud | 4 / 4 / 0 / 0 | 4 / 4 / 0 / 0 |
-| j-lawyer-fax | 23 / 23 / 0 / 0 | 23 / 23 / 0 / 0 |
-| j-lawyer-server-common | 104 / 104 / 0 / 17 | 104 / 104 / 0 / 17 |
+| j-lawyer-fax | 26 / 26 / 0 / 0 | 26 / 26 / 0 / 0 |
+| j-lawyer-server-common | 133 / 133 / 0 / 17 | 133 / 133 / 0 / 17 |
 | j-lawyer-server-entities | 56 / 56 / 0 / 0 | 56 / 56 / 0 / 0 |
-| total | 282 / 282 / 0 / 17 | 268 / 268 / 0 / 17 |
+| total | 373 / 373 / 0 / 17 | 354 / 354 / 0 / 17 |
 
 Failing tests: identical to master
 
@@ -109,3 +113,17 @@ pr.md ist angepasst (siehe die Punkte oben).
 Antworten je Thread:
 
 - PRRT_kwDOCUQTLc6zRA4O: Behoben in fb22fb03f und 89a7dde52: Formularfelder ohne Widget auf einer Seite des Teils werden samt /V und /DV entfernt, auch wenn ein behaltenes Widget sie über /Parent und /Kids erreicht. Behalten werden nur die Widgets der behaltenen Seiten und ihre Felder entlang /Parent. Die Feldbäume werden ohne Rekursion durchlaufen, so werden auch fehlerhafte Formulare mit Zyklen und sehr tiefe Feldbäume verarbeitet. Tests mit Nachbarfeldern mit unterschiedlichen Werten, mit einem Zyklus und mit 20000 Ebenen prüfen Datenströme und Zeichenketten aller Objekte.
+
+## Antwort auf Jens 05.11.
+Request: also split in the scan folder with `PdfSplitUtils` (range functions for both scanner modes, a `split()` that loads the source for every part, `PDFSplitAction` switched, `PDFBlankPageSplitter` removed, small range tests). Done in d2ede8ab8, after merging upstream master 4e721956a into the branch (26924b4cc, a merge without conflicts, no rebase, no force-push).
+
+- `PdfSplitUtils.toPageCountRanges(n, pageCount)`: {0,n}, {n,2n}, ..., the last range up to the page count, `IllegalArgumentException` for n < 1 like `Splitter.setSplitAtPage()`.
+- `PdfSplitUtils.toSeparatorRanges(separators, pageCount)`: a part starts at every index that is a separator or follows one, so every separator page is a part of its own. This is the rule of the removed `PDFBlankPageSplitter.splitAtPage()` (`contains(index) || contains(index - 1)`) on top of the PDFBox `Splitter`, which calls it with zero-based indices (checked in the bytecode of PDFBox 2.0.24: `processPage()` gets `currentPageNumber` before it is incremented, a new part also starts at the first page).
+- `PdfSplitUtils.split(pdf, ranges)`: loads the source for every part and returns the saved parts. `ArchiveFilePanel.mnuSplitPdfActionPerformed()` uses it too (before, it loaded the temp file for every part itself).
+- `PDFSplitAction`: there are four modes, not two. Page count (`SPLITTYPE_PAGECOUNT`) uses `toPageCountRanges`. Blank pages by resources (`SPLITTYPE_BLANKPAGES`), keyword separator pages (`SPLITTYPE_KEYWORD`) and rendered blank pages (`SPLITTYPE_BLANKPAGESFUZZY`) all used `PDFBlankPageSplitter`, they now use `toSeparatorRanges` with the same index lists as before. Detection, the skipping of single-page separator parts (keyword in the text, rendered page blank, now checked on the saved part when its range has one page, as `doc.getNumberOfPages() == 1` did), part order, `doRefresh`, progress and file names (`_S<a>-S<b>.pdf`, `-001.pdf`, ...) are unchanged. `setSplitAtPage()` in the fuzzy mode had no effect (the subclass overrides `splitAtPage()`) and is gone. `PDFBlankPageSplitter` is deleted, it had no other callers (`grep` over the repository, `ScannerPanel` only creates `PDFSplitAction`), the client builds.
+- Observation, not changed: in `SPLITTYPE_BLANKPAGES` the detection loop collects 1-based page numbers (`Integer pageNumber = 1`), while the splitter compares zero-based indices (the keyword and fuzzy modes collect zero-based ones). With 5 pages and page 3 blank (number 3, index 2) the parts are pages 1-3, 4 and 5, so the blank page ends part 1 and page 4 is a part of its own. Kept because the output has to stay identical, the fix would be starting the counter at 0. Worth a decision.
+- Tests (`PdfSplitUtilsTest`, now 19): `testPageCountRanges` (without and with remainder, fewer pages than a part, 1 per part, 0 pages), `testPageCountRangesNeedOnePagePerPart`, `testSeparatorRanges` (separator at the start, in the middle, at the end, several one after the other, several apart, none, only a separator, 0 pages), `testRangesAreThoseOfThePdfBoxSplitter` (for 1 to 7 pages: the page counts per part of `Splitter.setSplitAtPage(1..4)` and of a `Splitter` with the old `splitAtPage()` rule for every subset of the numbers -1 to pageCount, so also the 1-based lists, equal the ranges), `testSplitLoadsTheSourceForEveryPart` (form field with widgets on page 1 and page 5, parts 1-2 and 3-5: in both parts the widget's `/Parent` is the field `aktenzeichen` and its `/Kids` holds exactly that widget. Taking both parts from one loaded source with `extractPages()` leaves the field in part 2 with empty `/Kids`, also asserted).
+- Red check: a copy of d2ede8ab8 whose `split()` loads the source once for all parts. `-Dtest=PdfSplitUtilsTest`: exactly `testSplitLoadsTheSourceForEveryPart` fails (`expected:<1> but was:<0>`, the `/Kids` of the field in part 2), the other 18 pass. The range tests test new code (they do not compile on 89a7dde52), their equivalence with the old behaviour is `testRangesAreThoseOfThePdfBoxSplitter`.
+- Not run: `PDFSplitAction` against a server (it needs the observed folder of a running server), no GUI.
+- Cost: `split()` parses the source once per part, for many parts of a large scan this takes longer than the old single `Splitter` run.
+- PR text: the problem is described as references to other pages in the parts, the sentence with the earlier wording is gone.
